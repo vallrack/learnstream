@@ -5,10 +5,11 @@ import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { PlayCircle, Users, Star, Clock, Globe, BookOpen, CheckCircle2, Loader2, Zap } from 'lucide-react';
+import { PlayCircle, Users, Star, Clock, Globe, BookOpen, CheckCircle2, Loader2, Zap, ChevronRight, FileText } from 'lucide-react';
 import Link from 'next/link';
-import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { doc, collection, query, orderBy } from 'firebase/firestore';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 export default function CourseDetailPage() {
   const params = useParams();
@@ -20,9 +21,9 @@ export default function CourseDetailPage() {
     return doc(db, 'courses', id);
   }, [db, id]);
 
-  const { data: course, isLoading } = useDoc(courseRef);
+  const { data: course, isLoading: isCourseLoading } = useDoc(courseRef);
 
-  if (isLoading) {
+  if (isCourseLoading) {
     return (
       <div className="min-h-screen bg-background flex flex-col">
         <Navbar />
@@ -93,11 +94,7 @@ export default function CourseDetailPage() {
 
             <section>
               <h2 className="text-2xl font-headline font-bold mb-6">Contenido del Curso</h2>
-              <div className="p-12 text-center bg-muted/10 rounded-3xl border-2 border-dashed">
-                <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground font-medium">Contenido en preparación.</p>
-                <p className="text-sm text-muted-foreground mt-2">Próximamente podrás gestionar módulos y lecciones desde el panel de administrador.</p>
-              </div>
+              <CourseCurriculum courseId={id} />
             </section>
           </div>
 
@@ -143,6 +140,87 @@ export default function CourseDetailPage() {
           </div>
         </div>
       </main>
+    </div>
+  );
+}
+
+function CourseCurriculum({ courseId }: { courseId: string }) {
+  const db = useFirestore();
+
+  const modulesQuery = useMemoFirebase(() => {
+    if (!db) return null;
+    return query(collection(db, 'courses', courseId, 'modules'), orderBy('order', 'asc'));
+  }, [db, courseId]);
+
+  const { data: modules, isLoading } = useCollection(modulesQuery);
+
+  if (isLoading) return <div className="flex justify-center p-12"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+
+  if (!modules || modules.length === 0) {
+    return (
+      <div className="p-12 text-center bg-muted/10 rounded-3xl border-2 border-dashed">
+        <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+        <p className="text-muted-foreground font-medium">Contenido en preparación.</p>
+        <p className="text-sm text-muted-foreground mt-2">Próximamente podrás gestionar módulos y lecciones desde el panel de administrador.</p>
+      </div>
+    );
+  }
+
+  return (
+    <Accordion type="single" collapsible className="w-full space-y-4">
+      {modules.map((module) => (
+        <AccordionItem key={module.id} value={module.id} className="bg-card border rounded-2xl overflow-hidden px-4">
+          <AccordionTrigger className="hover:no-underline py-6">
+            <div className="flex flex-col items-start text-left gap-1">
+              <span className="text-xs font-bold text-primary uppercase tracking-wider">Módulo {module.order}</span>
+              <span className="text-lg font-bold">{module.title}</span>
+            </div>
+          </AccordionTrigger>
+          <AccordionContent className="pb-6">
+            <ModuleLessons courseId={courseId} moduleId={module.id} />
+          </AccordionContent>
+        </AccordionItem>
+      ))}
+    </Accordion>
+  );
+}
+
+function ModuleLessons({ courseId, moduleId }: { courseId: string, moduleId: string }) {
+  const db = useFirestore();
+
+  const lessonsQuery = useMemoFirebase(() => {
+    if (!db) return null;
+    return query(collection(db, 'courses', courseId, 'modules', moduleId, 'lessons'), orderBy('order', 'asc'));
+  }, [db, courseId, moduleId]);
+
+  const { data: lessons, isLoading } = useCollection(lessonsQuery);
+
+  if (isLoading) return <div className="py-4 flex justify-center"><Loader2 className="h-4 w-4 animate-spin text-primary" /></div>;
+
+  return (
+    <div className="space-y-2">
+      {lessons?.map((lesson) => (
+        <div key={lesson.id} className="flex items-center justify-between p-3 rounded-xl hover:bg-muted/30 transition-colors group">
+          <div className="flex items-center gap-3">
+            <div className="bg-muted p-2 rounded-lg group-hover:bg-primary/10 transition-colors">
+              <FileText className="h-4 w-4 text-muted-foreground group-hover:text-primary" />
+            </div>
+            <div>
+              <p className="text-sm font-medium">{lesson.title}</p>
+              <p className="text-xs text-muted-foreground">{lesson.durationInMinutes || 0} min</p>
+            </div>
+          </div>
+          <Button variant="ghost" size="sm" className="rounded-lg h-8 gap-1" asChild>
+             <Link href={`/courses/${courseId}/learn/${lesson.id}`}>
+               Ver
+               <ChevronRight className="h-4 w-4" />
+             </Link>
+          </Button>
+        </div>
+      ))}
+      {(!lessons || lessons.length === 0) && (
+        <p className="text-xs text-muted-foreground italic px-4">Este módulo no tiene lecciones aún.</p>
+      )}
     </div>
   );
 }
