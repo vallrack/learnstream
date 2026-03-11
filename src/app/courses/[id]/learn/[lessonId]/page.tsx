@@ -61,6 +61,37 @@ export default function LessonPlayerPage() {
     );
   }
 
+  // Lógica robusta para detectar la URL del video (puede estar en title o videoUrl)
+  const isUrl = (str: string) => {
+    if (!str) return false;
+    try {
+      new URL(str);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  const videoSource = isUrl(currentLesson.videoUrl) 
+    ? currentLesson.videoUrl 
+    : (isUrl(currentLesson.title) ? currentLesson.title : null);
+
+  const formatVideoUrl = (url: string) => {
+    if (!url) return '';
+    // Manejar youtube.com/watch?v=...
+    if (url.includes('youtube.com/watch?v=')) {
+      return url.replace('watch?v=', 'embed/');
+    }
+    // Manejar youtu.be/...
+    if (url.includes('youtu.be/')) {
+      const id = url.split('/').pop()?.split('?')[0];
+      return `https://www.youtube.com/embed/${id}`;
+    }
+    return url;
+  };
+
+  const displayTitle = isUrl(currentLesson.title) ? "Video Clase" : currentLesson.title;
+
   return (
     <div className="h-screen flex flex-col bg-background overflow-hidden">
       <Navbar />
@@ -90,21 +121,19 @@ export default function LessonPlayerPage() {
                   <span>/</span>
                   <Link href={`/courses/${courseId}`} className="hover:text-primary truncate max-w-[150px]">{course.title}</Link>
                   <span>/</span>
-                  <span className="text-foreground font-medium">{currentLesson.title}</span>
+                  <span className="text-foreground font-medium">{displayTitle}</span>
                 </nav>
                 <Button variant="ghost" size="icon"><MoreVertical className="h-4 w-4" /></Button>
               </div>
 
               {/* Video Player */}
-              {currentLesson.videoUrl ? (
+              {videoSource ? (
                 <div className="aspect-video bg-black rounded-2xl overflow-hidden shadow-2xl relative group">
                   <iframe 
                     width="100%" 
                     height="100%" 
-                    src={currentLesson.videoUrl.includes('youtube.com/watch?v=') 
-                        ? currentLesson.videoUrl.replace('watch?v=', 'embed/') 
-                        : currentLesson.videoUrl} 
-                    title={currentLesson.title}
+                    src={formatVideoUrl(videoSource)} 
+                    title={displayTitle}
                     frameBorder="0" 
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
                     allowFullScreen
@@ -119,9 +148,13 @@ export default function LessonPlayerPage() {
 
               {/* Text Content */}
               <article className="prose prose-slate max-w-none bg-card p-8 md:p-12 rounded-3xl border shadow-sm">
-                <h1 className="text-3xl md:text-4xl font-headline font-bold mb-8">{currentLesson.title}</h1>
+                <h1 className="text-3xl md:text-4xl font-headline font-bold mb-8">{displayTitle}</h1>
                 <div className="text-lg leading-relaxed text-muted-foreground space-y-6">
-                  {currentLesson.content ? (
+                  {currentLesson.description ? (
+                    currentLesson.description.split('\n').map((para: string, i: number) => (
+                      <p key={i}>{para}</p>
+                    ))
+                  ) : currentLesson.content ? (
                     currentLesson.content.split('\n').map((para: string, i: number) => (
                       <p key={i}>{para}</p>
                     ))
@@ -151,7 +184,7 @@ export default function LessonPlayerPage() {
 
         {/* AI Assistant Panel */}
         <aside className="hidden xl:block w-96 bg-card border-l shrink-0">
-          <LessonAssistant lessonContent={currentLesson.content || ''} />
+          <LessonAssistant lessonContent={currentLesson.content || currentLesson.description || ''} />
         </aside>
       </div>
     </div>
@@ -167,6 +200,16 @@ function ModuleInSidebar({ module, courseId, activeLessonId, index }: { module: 
 
   const { data: lessons } = useCollection(lessonsQuery);
 
+  const isUrl = (str: string) => {
+    if (!str) return false;
+    try {
+      new URL(str);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
   return (
     <div className="border-b last:border-0">
       <div className="bg-muted/10 px-4 py-3 font-semibold text-xs text-muted-foreground uppercase tracking-wider">
@@ -175,6 +218,7 @@ function ModuleInSidebar({ module, courseId, activeLessonId, index }: { module: 
       <div className="divide-y divide-border/50">
         {lessons?.map(lesson => {
           const isActive = lesson.id === activeLessonId;
+          const lessonTitle = isUrl(lesson.title) ? "Video Clase" : lesson.title;
           return (
             <Link 
               key={lesson.id} 
@@ -183,7 +227,7 @@ function ModuleInSidebar({ module, courseId, activeLessonId, index }: { module: 
             >
               <div className="flex items-center gap-3">
                 <CheckCircle className={`h-4 w-4 ${isActive ? 'text-primary' : 'text-muted-foreground/30'}`} />
-                <span className="truncate">{lesson.title}</span>
+                <span className="truncate">{lessonTitle}</span>
               </div>
             </Link>
           );
