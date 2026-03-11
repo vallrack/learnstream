@@ -1,3 +1,34 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "course-hero",
+      "description": "Educational platform hero",
+      "imageUrl": "https://picsum.photos/seed/learnstream1/1200/600",
+      "imageHint": "education technology"
+    },
+    {
+      "id": "coding-course",
+      "description": "Web Development Course",
+      "imageUrl": "https://picsum.photos/seed/dev/800/450",
+      "imageHint": "coding web"
+    },
+    {
+      "id": "design-course",
+      "description": "UX Design Fundamentals",
+      "imageUrl": "https://picsum.photos/seed/design/800/450",
+      "imageHint": "ui ux design"
+    },
+    {
+      "id": "business-course",
+      "description": "Digital Marketing Strategy",
+      "imageUrl": "https://picsum.photos/seed/marketing/800/450",
+      "imageHint": "digital marketing"
+    },
+    {
+      "id": "user-avatar",
+      "description": "User profile avatar",
+      "imageUrl": "https://picsum.photos/seed/user/200/200",
+      "imageHint": "user profile"
+    }
+  ]
 }
