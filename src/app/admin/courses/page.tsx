@@ -1,10 +1,9 @@
-
 'use client';
 
 import { useState } from 'react';
 import { Navbar } from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
-import { Plus, Edit, Trash2, MoreHorizontal, LayoutGrid, List as ListIcon, Loader2 } from 'lucide-react';
+import { Plus, Edit, Trash2, MoreHorizontal, LayoutGrid, List as ListIcon, Loader2, BookOpen } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -14,6 +13,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import Link from 'next/link';
 
 export default function AdminCoursesPage() {
   const { user } = useUser();
@@ -66,7 +66,6 @@ export default function AdminCoursesPage() {
       updatedAt: serverTimestamp(),
     };
 
-    // Solo añadimos la imagen si el usuario proporcionó una URL nueva o estamos creando
     if (imageUrl) {
       if (imageUrl.startsWith('data:')) {
         courseData.thumbnailDataUrl = imageUrl;
@@ -104,7 +103,7 @@ export default function AdminCoursesPage() {
         <header className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-12">
           <div>
             <h1 className="text-4xl font-headline font-bold mb-2 text-foreground">Gestionar Cursos</h1>
-            <p className="text-muted-foreground">Crea, edita y organiza tu contenido educativo real.</p>
+            <p className="text-muted-foreground">Crea y organiza tu contenido educativo.</p>
           </div>
           
           <Dialog open={isDialogOpen} onOpenChange={(open) => {
@@ -167,7 +166,6 @@ export default function AdminCoursesPage() {
           <div className="p-4 border-b flex items-center justify-between bg-muted/20">
             <div className="flex items-center gap-2">
               <Button variant="ghost" size="sm" className="bg-card shadow-sm"><ListIcon className="h-4 w-4 mr-2" /> Tabla</Button>
-              <Button variant="ghost" size="sm"><LayoutGrid className="h-4 w-4 mr-2" /> Cuadrícula</Button>
             </div>
           </div>
           
@@ -202,6 +200,12 @@ export default function AdminCoursesPage() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
+                        <Link href={`/admin/courses/${course.id}/content`}>
+                          <Button variant="outline" size="sm" className="gap-2 rounded-lg text-xs h-8">
+                            <BookOpen className="h-3.5 w-3.5" />
+                            Contenido
+                          </Button>
+                        </Link>
                         <Button 
                           variant="ghost" 
                           size="icon" 
@@ -218,26 +222,10 @@ export default function AdminCoursesPage() {
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem>Duplicar</DropdownMenuItem>
-                            <DropdownMenuItem>Archivar</DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
                       </div>
                     </TableCell>
                   </TableRow>
                 ))}
-                {courses?.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={4} className="text-center py-10 text-muted-foreground">
-                      No hay cursos creados aún. ¡Empieza creando el primero!
-                    </TableCell>
-                  </TableRow>
-                )}
               </TableBody>
             </Table>
           )}
