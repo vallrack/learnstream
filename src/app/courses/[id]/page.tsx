@@ -6,7 +6,7 @@ import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { PlayCircle, Users, Star, Clock, Globe, BookOpen, CheckCircle2, Loader2, Zap, ChevronRight, FileText, Play } from 'lucide-react';
+import { PlayCircle, Users, Star, Clock, Globe, BookOpen, CheckCircle2, Loader2, Zap, ChevronRight, Play } from 'lucide-react';
 import Link from 'next/link';
 import { useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc, collection, query, orderBy } from 'firebase/firestore';
@@ -26,7 +26,6 @@ export default function CourseDetailPage() {
 
   const { data: course, isLoading: isCourseLoading } = useDoc(courseRef);
 
-  // Intentamos obtener la primera lección para usar su video como preview si el curso no tiene uno propio
   const modulesQuery = useMemoFirebase(() => {
     if (!db || !id) return null;
     return query(collection(db, 'courses', id, 'modules'), orderBy('orderIndex', 'asc'));
@@ -58,7 +57,6 @@ export default function CourseDetailPage() {
     );
   }
 
-  // URL de video para la vista previa (prioriza course.previewVideoUrl, luego podrías buscar en lecciones)
   const previewVideoUrl = course.previewVideoUrl || (modules?.[0]?.id ? "https://www.youtube.com/embed/bn2ZGKdYytc" : null);
 
   const formatVideoUrl = (url: string) => {
@@ -99,10 +97,9 @@ export default function CourseDetailPage() {
 
       <main className="max-w-7xl mx-auto px-6 -mt-12">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
-          {/* Main Content */}
           <div className="lg:col-span-2 space-y-12">
             <section className="bg-card p-8 rounded-2xl border shadow-sm mt-20 md:mt-0">
-              <h2 className="text-2xl font-headline font-bold mb-6">Lo que aprenderás</h2>
+              <h2 className="text-2xl font-headline font-bold mb-6 text-foreground">Lo que aprenderás</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {[
                   "Dominio completo de la sintaxis y lógica",
@@ -112,19 +109,18 @@ export default function CourseDetailPage() {
                 ].map((item, i) => (
                   <div key={i} className="flex gap-3 text-sm">
                     <CheckCircle2 className="h-5 w-5 text-emerald-500 shrink-0" />
-                    <span>{item}</span>
+                    <span className="text-foreground">{item}</span>
                   </div>
                 ))}
               </div>
             </section>
 
             <section>
-              <h2 className="text-2xl font-headline font-bold mb-6">Contenido del Curso</h2>
+              <h2 className="text-2xl font-headline font-bold mb-6 text-foreground">Contenido del Curso</h2>
               <CourseCurriculum courseId={id} />
             </section>
           </div>
 
-          {/* Sidebar - Video Card */}
           <div className="space-y-6">
             <div className="bg-card rounded-2xl border shadow-2xl overflow-hidden sticky top-24">
               <div className="relative aspect-video bg-black group">
@@ -141,7 +137,7 @@ export default function CourseDetailPage() {
                 ) : (
                   <>
                     <Image 
-                      src={course.thumbnail || 'https://picsum.photos/seed/course/800/450'} 
+                      src={course.imageUrl || 'https://picsum.photos/seed/course/800/450'} 
                       alt={course.title}
                       fill
                       className="object-cover opacity-80"
@@ -161,7 +157,7 @@ export default function CourseDetailPage() {
                 )}
               </div>
               <div className="p-8">
-                <div className="text-3xl font-headline font-bold mb-6">
+                <div className="text-3xl font-headline font-bold mb-6 text-foreground">
                   {course.isFree ? 'Gratis' : '$29.99'}
                   {course.isFree && <span className="text-sm font-normal text-muted-foreground ml-2">por tiempo limitado</span>}
                 </div>
@@ -176,7 +172,7 @@ export default function CourseDetailPage() {
                 </div>
 
                 <div className="mt-8 space-y-4">
-                  <p className="font-semibold text-sm">Este curso incluye:</p>
+                  <p className="font-semibold text-sm text-foreground">Este curso incluye:</p>
                   <ul className="space-y-3 text-sm text-muted-foreground">
                     <li className="flex items-center gap-3"><Clock className="h-4 w-4" /> Acceso ilimitado de por vida</li>
                     <li className="flex items-center gap-3"><BookOpen className="h-4 w-4" /> 12 recursos descargables</li>
@@ -223,7 +219,7 @@ function CourseCurriculum({ courseId }: { courseId: string }) {
               <span className="text-xs font-bold text-primary uppercase tracking-wider">
                 Módulo {module.orderIndex !== undefined ? module.orderIndex + 1 : index + 1}
               </span>
-              <span className="text-lg font-bold">{module.title}</span>
+              <span className="text-lg font-bold text-foreground">{module.title}</span>
             </div>
           </AccordionTrigger>
           <AccordionContent className="pb-6">
@@ -265,7 +261,7 @@ function ModuleLessons({ courseId, moduleId }: { courseId: string, moduleId: str
               <PlayCircle className="h-5 w-5 text-muted-foreground group-hover:text-primary" />
             </div>
             <div>
-              <p className="text-sm font-semibold group-hover:text-primary transition-colors">
+              <p className="text-sm font-semibold group-hover:text-primary transition-colors text-foreground">
                 {isUrl(lesson.title) ? "Video Clase" : lesson.title}
               </p>
               <div className="flex items-center gap-3 mt-1">

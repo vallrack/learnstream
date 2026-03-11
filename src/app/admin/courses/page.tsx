@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -23,6 +24,7 @@ export default function AdminCoursesPage() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
+  const [imageUrl, setImageUrl] = useState('');
   const [isFree, setIsFree] = useState(true);
 
   const coursesQuery = useMemoFirebase(() => {
@@ -41,9 +43,9 @@ export default function AdminCoursesPage() {
       description,
       category,
       isFree,
+      imageUrl: imageUrl || `https://picsum.photos/seed/${Math.random()}/800/450`,
       instructorId: user.uid,
       instructorName: user.displayName || user.email,
-      thumbnail: `https://picsum.photos/seed/${Math.random()}/800/450`,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     };
@@ -54,6 +56,7 @@ export default function AdminCoursesPage() {
     setTitle('');
     setDescription('');
     setCategory('');
+    setImageUrl('');
     setIsFree(true);
     setIsDialogOpen(false);
   };
@@ -70,7 +73,7 @@ export default function AdminCoursesPage() {
       <main className="max-w-7xl mx-auto px-6 py-12">
         <header className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-12">
           <div>
-            <h1 className="text-4xl font-headline font-bold mb-2">Gestionar Cursos</h1>
+            <h1 className="text-4xl font-headline font-bold mb-2 text-foreground">Gestionar Cursos</h1>
             <p className="text-muted-foreground">Crea, edita y organiza tu contenido educativo real.</p>
           </div>
           
@@ -95,6 +98,10 @@ export default function AdminCoursesPage() {
                   <div className="grid gap-2">
                     <Label htmlFor="category">Categoría</Label>
                     <Input id="category" value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Ej: Desarrollo, Diseño..." required className="rounded-xl" />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="imageUrl">URL de la Imagen (Opcional)</Label>
+                    <Input id="imageUrl" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="https://ejemplo.com/imagen.jpg" className="rounded-xl" />
                   </div>
                   <div className="grid gap-2">
                     <Label htmlFor="description">Descripción</Label>
