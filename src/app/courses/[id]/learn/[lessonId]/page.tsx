@@ -1,11 +1,10 @@
-
 'use client';
 
 import { useParams, useSearchParams } from 'next/navigation';
 import { Navbar } from '@/components/layout/Navbar';
 import { LessonAssistant } from '@/components/player/LessonAssistant';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight, CheckCircle, Menu, MoreVertical, Loader2, BookOpen } from 'lucide-react';
+import { ChevronLeft, ChevronRight, CheckCircle, Menu, MoreVertical, Loader2, BookOpen, PlayCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc, collection, query, orderBy } from 'firebase/firestore';
