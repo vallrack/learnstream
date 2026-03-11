@@ -17,8 +17,8 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import Link from 'next/link';
 
 export default function LoginPage() {
-  const { auth } = useAuth();
-  const { firestore } = useFirestore();
+  const auth = useAuth();
+  const firestore = useFirestore();
   const { user, isUserLoading } = useUser();
   const router = useRouter();
   const [email, setEmail] = useState('');
@@ -26,7 +26,6 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<{ message: string; code?: string } | null>(null);
 
-  // Redirigir si ya está logueado
   useEffect(() => {
     if (user && !loading) {
       router.push('/dashboard');
@@ -40,14 +39,13 @@ export default function LoginPage() {
     const userDoc = await getDoc(userRef);
 
     if (!userDoc.exists()) {
-      // Si el documento no existe (como podría pasar con tu super admin manual), lo creamos
       setDocumentNonBlocking(userRef, {
         id: authUser.uid,
         displayName: authUser.displayName || email.split('@')[0],
         email: authUser.email,
         profileImageUrl: authUser.photoURL || `https://picsum.photos/seed/${authUser.uid}/200/200`,
         createdAt: serverTimestamp(),
-        isPremiumSubscriber: true, // Asumimos premium para el super admin
+        isPremiumSubscriber: true,
       }, { merge: true });
     }
   };
