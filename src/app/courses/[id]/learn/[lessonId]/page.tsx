@@ -249,19 +249,51 @@ function LessonResources({ courseId, moduleId, lessonId }: { courseId: string, m
 
   const getPreviewUrl = (res: any) => {
     if (!res.contentUrl) return '';
+    const url = res.contentUrl;
     
-    // Handle Office files (Word, PPT) via Microsoft Viewer
-    if (['word', 'ppt'].includes(res.type)) {
-      return `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(res.contentUrl)}`;
+    // 1. Google Docs/Slides/Sheets (más robusto)
+    if (url.includes('docs.google.com')) {
+      if (url.includes('/presentation/')) {
+        return url.replace(/\/edit.*$/, '/embed').replace(/\/view.*$/, '/embed');
+      }
+      if (url.includes('/document/')) {
+        return url.replace(/\/edit.*$/, '/preview').replace(/\/view.*$/, '/preview');
+      }
+      if (url.includes('/spreadsheets/')) {
+        return url.replace(/\/edit.*$/, '/preview').replace(/\/view.*$/, '/preview');
+      }
     }
 
-    // Handle Google Drive links for preview
-    if (res.contentUrl.includes('drive.google.com/file/d/')) {
-      const fileId = res.contentUrl.split('/d/')[1]?.split('/')[0];
-      return `https://drive.google.com/file/d/${fileId}/preview`;
+    // 2. Google Drive links (transformar a vista previa de iframe)
+    if (url.includes('drive.google.com')) {
+      const match = url.match(/\/d\/([a-zA-Z0-9-_]+)/);
+      if (match && match[1]) {
+        return `https://drive.google.com/file/d/${match[1]}/preview`;
+      }
     }
 
-    return res.contentUrl;
+    // 3. Microsoft Office (Word, PPT) vía Visor de Microsoft
+    const isOfficeDoc = ['word', 'ppt'].includes(res.type) || 
+                       url.toLowerCase().match(/\.(docx|pptx|doc|ppt)$/i);
+    
+    if (isOfficeDoc) {
+      return `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(url)}`;
+    }
+
+    // 4. PDF (el navegador suele renderizarlos bien en iframe si son directos)
+    if (res.type === 'pdf' || url.toLowerCase().endsWith('.pdf')) {
+      return url;
+    }
+
+    return url;
+  };
+
+  const isEmbeddable = (res: any) => {
+    const url = res.contentUrl;
+    return url.includes('drive.google.com') || 
+           url.includes('docs.google.com') || 
+           ['pdf', 'word', 'ppt'].includes(res.type) ||
+           url.toLowerCase().match(/\.(pdf|docx|pptx|doc|ppt)$/i);
   };
 
   return (
@@ -296,18 +328,21 @@ function LessonResources({ courseId, moduleId, lessonId }: { courseId: string, m
       </div>
 
       <Dialog open={!!previewResource} onOpenChange={(open) => !open && setPreviewResource(null)}>
-        <DialogContent className="max-w-[95vw] lg:max-w-5xl h-[90vh] flex flex-col p-0 overflow-hidden rounded-3xl border-none shadow-2xl">
-          <DialogHeader className="p-6 border-b flex flex-row items-center justify-between space-y-0">
-            <DialogTitle className="font-headline font-bold text-xl flex items-center gap-3">
+        <DialogContent className="max-w-[95vw] lg:max-w-6xl h-[92vh] flex flex-col p-0 overflow-hidden rounded-3xl border-none shadow-2xl">
+          <DialogHeader className="p-4 md:p-6 border-b flex flex-row items-center justify-between space-y-0 bg-white">
+            <DialogTitle className="font-headline font-bold text-lg md:text-xl flex items-center gap-3 truncate max-w-[70%]">
               {previewResource && getIcon(previewResource.type)}
-              {previewResource?.title}
+              <span className="truncate">{previewResource?.title}</span>
             </DialogTitle>
-            <div className="flex items-center gap-2 pr-8">
+            <div className="flex items-center gap-2 pr-10">
                {previewResource && (
                  <a href={previewResource.contentUrl} target="_blank" rel="noopener noreferrer">
-                   <Button variant="outline" size="sm" className="h-9 gap-2 rounded-xl">
+                   <Button variant="outline" size="sm" className="h-9 gap-2 rounded-xl hidden sm:flex">
                      <Download className="h-4 w-4" />
-                     Descargar
+                     Abrir Original
+                   </Button>
+                   <Button variant="outline" size="icon" className="h-9 w-9 rounded-xl sm:hidden">
+                     <ExternalLink className="h-4 w-4" />
                    </Button>
                  </a>
                )}
@@ -315,27 +350,25 @@ function LessonResources({ courseId, moduleId, lessonId }: { courseId: string, m
           </DialogHeader>
           
           <div className="flex-1 bg-slate-100 relative">
-            {previewResource && (
+            {previewResource && isEmbeddable(previewResource) ? (
               <iframe 
                 src={getPreviewUrl(previewResource)} 
-                className="w-full h-full border-none"
+                className="w-full h-full border-none bg-white"
                 title={previewResource.title}
+                allow="autoplay"
               />
-            )}
-            
-            {/* Fallback info for non-embeddable links */}
-            {previewResource?.type === 'link' && !previewResource.contentUrl.includes('drive.google.com') && (
+            ) : previewResource && (
               <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center gap-6 bg-white">
                 <div className="bg-primary/5 p-6 rounded-full">
                   <LinkIcon className="h-12 w-12 text-primary" />
                 </div>
                 <div className="space-y-2 max-w-md">
-                  <h3 className="font-bold text-lg">Este enlace externo requiere abrirse por separado</h3>
-                  <p className="text-sm text-muted-foreground">Por seguridad, algunos sitios como Drive o Notion prefieren abrirse en su propia pestaña.</p>
+                  <h3 className="font-bold text-lg">Este recurso requiere abrirse externamente</h3>
+                  <p className="text-sm text-muted-foreground">Por políticas de seguridad del sitio de origen (como Notion o algunos servicios de Microsoft), este contenido debe verse en su propia pestaña.</p>
                 </div>
                 <a href={previewResource.contentUrl} target="_blank" rel="noopener noreferrer">
                   <Button className="h-12 px-8 rounded-xl gap-2 text-lg shadow-lg">
-                    Ir al recurso externo
+                    Ver material completo
                     <ExternalLink className="h-5 w-5" />
                   </Button>
                 </a>
