@@ -15,7 +15,9 @@ import {
   Paperclip,
   Upload,
   Link as LinkIcon,
-  X
+  X,
+  FileText,
+  Presentation
 } from 'lucide-react';
 import { 
   useCollection, 
@@ -370,7 +372,7 @@ function ResourceManager({ course, moduleId, lesson }: { course: any, moduleId: 
         }, 
         (error) => {
           console.error("Upload task failed", error);
-          alert(`Error al subir: ${error.message}. Verifica los permisos de Storage en tu consola.`);
+          alert(`Error al subir: ${error.message}. Verifica los permisos de Storage.`);
           setUploading(false);
         }, 
         async () => {
@@ -445,15 +447,15 @@ function ResourceManager({ course, moduleId, lesson }: { course: any, moduleId: 
                   <Select value={type} onValueChange={setType}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="pdf">Documento PDF</SelectItem>
-                      <SelectItem value="word">Documento Word</SelectItem>
-                      <SelectItem value="ppt">Presentación PowerPoint</SelectItem>
-                      <SelectItem value="link">Enlace Externo</SelectItem>
+                      <SelectItem value="pdf">Documento PDF (Subir)</SelectItem>
+                      <SelectItem value="word">Documento Word (Subir)</SelectItem>
+                      <SelectItem value="ppt">PowerPoint (Subir)</SelectItem>
+                      <SelectItem value="link">Enlace Externo (Drive, OneDrive, etc.)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
-                {type !== 'link' && (
+                {type !== 'link' ? (
                   <div className="space-y-2">
                     <Label>Subir Archivo</Label>
                     <div className="border-2 border-dashed rounded-xl p-4 text-center min-h-[100px] flex flex-col items-center justify-center gap-4">
@@ -483,6 +485,13 @@ function ResourceManager({ course, moduleId, lesson }: { course: any, moduleId: 
                       )}
                     </div>
                   </div>
+                ) : (
+                  <div className="p-4 bg-primary/5 rounded-xl border border-primary/10 flex items-start gap-3">
+                    <LinkIcon className="h-5 w-5 text-primary mt-0.5" />
+                    <p className="text-xs text-muted-foreground">
+                      Pega una URL compartida de <strong>Google Drive, OneDrive, Notion</strong> o cualquier sitio externo.
+                    </p>
+                  </div>
                 )}
 
                 <div className="space-y-2">
@@ -491,9 +500,9 @@ function ResourceManager({ course, moduleId, lesson }: { course: any, moduleId: 
                 </div>
 
                 <div className="space-y-2">
-                  <Label>{type === 'link' ? 'URL del Enlace' : 'URL del Archivo (Generada)'}</Label>
+                  <Label>{type === 'link' ? 'URL del Enlace' : 'URL del Archivo (Generada automáticamente)'}</Label>
                   <Input 
-                    placeholder="https://..." 
+                    placeholder="https://drive.google.com/..." 
                     value={contentUrl} 
                     onChange={(e) => setContentUrl(e.target.value)} 
                     required 
@@ -511,7 +520,7 @@ function ResourceManager({ course, moduleId, lesson }: { course: any, moduleId: 
         {resources?.map((res) => (
           <div key={res.id} className="text-[10px] p-2 bg-white border rounded-lg flex items-center justify-between group">
             <span className="truncate pr-2 flex items-center gap-1">
-              {res.type === 'link' ? <LinkIcon className="h-3 w-3" /> : <Paperclip className="h-3 w-3" />}
+              {res.type === 'link' ? <LinkIcon className="h-3 w-3" /> : res.type === 'pdf' ? <FileText className="h-3 w-3 text-red-500" /> : <Paperclip className="h-3 w-3" />}
               {res.title}
             </span>
             <Button variant="ghost" size="icon" className="h-4 w-4 opacity-0 group-hover:opacity-100 text-destructive" onClick={() => handleDeleteResource(res.id)}>
