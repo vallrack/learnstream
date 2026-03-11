@@ -368,6 +368,7 @@ function ResourceManager({ course, moduleId, lesson }: { course: any, moduleId: 
       else if (['ppt', 'pptx'].includes(ext!)) setType('ppt');
     } catch (err) {
       console.error("Upload failed", err);
+      alert("Hubo un error al subir el archivo. Revisa tu conexión.");
     } finally {
       setUploading(false);
     }
@@ -435,17 +436,20 @@ function ResourceManager({ course, moduleId, lesson }: { course: any, moduleId: 
                 {type !== 'link' && (
                   <div className="space-y-2">
                     <Label>Subir Archivo</Label>
-                    <div className="border-2 border-dashed rounded-xl p-4 text-center">
+                    <div className="border-2 border-dashed rounded-xl p-4 text-center min-h-[80px] flex items-center justify-center">
                       {uploading ? (
-                        <Loader2 className="h-6 w-6 animate-spin mx-auto text-primary" />
+                        <div className="flex flex-col items-center gap-2">
+                          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                          <span className="text-[10px] text-muted-foreground">Subiendo archivo...</span>
+                        </div>
                       ) : contentUrl ? (
-                        <div className="flex items-center justify-center gap-2 text-emerald-600 text-xs font-bold">
-                          Archivo listo para guardar <X className="h-3 w-3 cursor-pointer" onClick={() => setContentUrl('')} />
+                        <div className="flex items-center justify-center gap-2 text-emerald-600 text-xs font-bold bg-emerald-50 w-full p-2 rounded-lg">
+                          Archivo listo <X className="h-3 w-3 cursor-pointer" onClick={() => setContentUrl('')} />
                         </div>
                       ) : (
                         <>
                           <input type="file" id="file-upload" className="hidden" onChange={handleFileUpload} />
-                          <label htmlFor="file-upload" className="cursor-pointer flex flex-col items-center gap-2">
+                          <label htmlFor="file-upload" className="cursor-pointer flex flex-col items-center gap-2 w-full">
                             <Upload className="h-6 w-6 text-muted-foreground" />
                             <span className="text-xs text-muted-foreground">Haz clic para seleccionar un archivo</span>
                           </label>
