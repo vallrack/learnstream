@@ -18,13 +18,23 @@ import {
   FileText,
   Presentation,
   Link as LinkIcon,
-  Download
+  Download,
+  Eye,
+  ExternalLink,
+  X
 } from 'lucide-react';
 import Link from 'next/link';
 import { useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc, collection, query, orderBy } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 export default function LessonPlayerPage() {
   const params = useParams();
@@ -180,7 +190,7 @@ export default function LessonPlayerPage() {
                       Tarea de hoy
                     </h4>
                     <p className="text-xs text-muted-foreground leading-relaxed">
-                      Descarga el material adjunto y completa los ejercicios antes de pasar al siguiente módulo.
+                      Explora el material adjunto y completa los ejercicios prácticos para reforzar lo aprendido hoy.
                     </p>
                   </div>
                 </div>
@@ -215,6 +225,8 @@ export default function LessonPlayerPage() {
 
 function LessonResources({ courseId, moduleId, lessonId }: { courseId: string, moduleId: string, lessonId: string }) {
   const db = useFirestore();
+  const [previewResource, setPreviewResource] = useState<any>(null);
+
   const resourcesQuery = useMemoFirebase(() => {
     if (!db) return null;
     return query(collection(db, 'courses', courseId, 'modules', moduleId, 'lessons', lessonId, 'resources'), orderBy('orderIndex', 'asc'));
@@ -222,7 +234,7 @@ function LessonResources({ courseId, moduleId, lessonId }: { courseId: string, m
 
   const { data: resources, isLoading } = useCollection(resourcesQuery);
 
-  if (isLoading) return <Loader2 className="h-4 w-4 animate-spin mx-auto" />;
+  if (isLoading) return <div className="flex justify-center p-4"><Loader2 className="h-4 w-4 animate-spin" /></div>;
 
   if (!resources || resources.length === 0) return null;
 
@@ -235,37 +247,104 @@ function LessonResources({ courseId, moduleId, lessonId }: { courseId: string, m
     }
   };
 
+  const getPreviewUrl = (res: any) => {
+    if (!res.contentUrl) return '';
+    
+    // Handle Office files (Word, PPT) via Microsoft Viewer
+    if (['word', 'ppt'].includes(res.type)) {
+      return `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(res.contentUrl)}`;
+    }
+
+    // Handle Google Drive links for preview
+    if (res.contentUrl.includes('drive.google.com/file/d/')) {
+      const fileId = res.contentUrl.split('/d/')[1]?.split('/')[0];
+      return `https://drive.google.com/file/d/${fileId}/preview`;
+    }
+
+    return res.contentUrl;
+  };
+
   return (
-    <div className="bg-card border rounded-3xl shadow-sm overflow-hidden">
-      <div className="p-5 border-b bg-muted/20">
-        <h3 className="font-headline font-bold text-sm flex items-center gap-2">
-          <Paperclip className="h-4 w-4 text-primary" />
-          Material de Apoyo
-        </h3>
-      </div>
-      <div className="p-3 space-y-2">
-        {resources.map((res) => (
-          <a 
-            key={res.id} 
-            href={res.contentUrl} 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="flex items-center justify-between p-3 rounded-2xl hover:bg-muted/50 transition-colors border border-transparent hover:border-border group"
-          >
-            <div className="flex items-center gap-3 overflow-hidden">
-              <div className="bg-background p-2 rounded-xl shadow-sm border group-hover:bg-primary/5 transition-colors">
-                {getIcon(res.type)}
+    <>
+      <div className="bg-card border rounded-3xl shadow-sm overflow-hidden">
+        <div className="p-5 border-b bg-muted/20">
+          <h3 className="font-headline font-bold text-sm flex items-center gap-2">
+            <Paperclip className="h-4 w-4 text-primary" />
+            Material de Apoyo
+          </h3>
+        </div>
+        <div className="p-3 space-y-2">
+          {resources.map((res) => (
+            <div 
+              key={res.id} 
+              className="flex items-center justify-between p-3 rounded-2xl hover:bg-muted/50 transition-colors border border-transparent hover:border-border group cursor-pointer"
+              onClick={() => setPreviewResource(res)}
+            >
+              <div className="flex items-center gap-3 overflow-hidden">
+                <div className="bg-background p-2 rounded-xl shadow-sm border group-hover:bg-primary/5 transition-colors">
+                  {getIcon(res.type)}
+                </div>
+                <div className="overflow-hidden">
+                  <p className="text-xs font-semibold truncate pr-2">{res.title}</p>
+                  <span className="text-[10px] text-muted-foreground uppercase">{res.type}</span>
+                </div>
               </div>
-              <div className="overflow-hidden">
-                <p className="text-xs font-semibold truncate pr-2">{res.title}</p>
-                <span className="text-[10px] text-muted-foreground uppercase">{res.type}</span>
-              </div>
+              <Eye className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors shrink-0" />
             </div>
-            <Download className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors shrink-0" />
-          </a>
-        ))}
+          ))}
+        </div>
       </div>
-    </div>
+
+      <Dialog open={!!previewResource} onOpenChange={(open) => !open && setPreviewResource(null)}>
+        <DialogContent className="max-w-[95vw] lg:max-w-5xl h-[90vh] flex flex-col p-0 overflow-hidden rounded-3xl border-none shadow-2xl">
+          <DialogHeader className="p-6 border-b flex flex-row items-center justify-between space-y-0">
+            <DialogTitle className="font-headline font-bold text-xl flex items-center gap-3">
+              {previewResource && getIcon(previewResource.type)}
+              {previewResource?.title}
+            </DialogTitle>
+            <div className="flex items-center gap-2 pr-8">
+               {previewResource && (
+                 <a href={previewResource.contentUrl} target="_blank" rel="noopener noreferrer">
+                   <Button variant="outline" size="sm" className="h-9 gap-2 rounded-xl">
+                     <Download className="h-4 w-4" />
+                     Descargar
+                   </Button>
+                 </a>
+               )}
+            </div>
+          </DialogHeader>
+          
+          <div className="flex-1 bg-slate-100 relative">
+            {previewResource && (
+              <iframe 
+                src={getPreviewUrl(previewResource)} 
+                className="w-full h-full border-none"
+                title={previewResource.title}
+              />
+            )}
+            
+            {/* Fallback info for non-embeddable links */}
+            {previewResource?.type === 'link' && !previewResource.contentUrl.includes('drive.google.com') && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center gap-6 bg-white">
+                <div className="bg-primary/5 p-6 rounded-full">
+                  <LinkIcon className="h-12 w-12 text-primary" />
+                </div>
+                <div className="space-y-2 max-w-md">
+                  <h3 className="font-bold text-lg">Este enlace externo requiere abrirse por separado</h3>
+                  <p className="text-sm text-muted-foreground">Por seguridad, algunos sitios como Drive o Notion prefieren abrirse en su propia pestaña.</p>
+                </div>
+                <a href={previewResource.contentUrl} target="_blank" rel="noopener noreferrer">
+                  <Button className="h-12 px-8 rounded-xl gap-2 text-lg shadow-lg">
+                    Ir al recurso externo
+                    <ExternalLink className="h-5 w-5" />
+                  </Button>
+                </a>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
