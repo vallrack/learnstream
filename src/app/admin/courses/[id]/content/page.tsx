@@ -13,8 +13,12 @@ import {
   GripVertical, 
   Video, 
   FileText,
-  ChevronRight,
-  Settings
+  FileDown,
+  Link as LinkIcon,
+  Presentation,
+  MoreVertical,
+  Settings,
+  Paperclip
 } from 'lucide-react';
 import { 
   useCollection, 
@@ -40,6 +44,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export default function CourseContentAdminPage() {
   const params = useParams();
@@ -124,7 +129,7 @@ export default function CourseContentAdminPage() {
           <div className="flex items-end justify-between gap-4">
             <div>
               <h1 className="text-4xl font-headline font-bold mb-2">Contenido: {course?.title}</h1>
-              <p className="text-muted-foreground">Organiza los módulos y lecciones de este curso.</p>
+              <p className="text-muted-foreground">Organiza los módulos, lecciones y recursos de este curso.</p>
             </div>
             
             <Dialog open={isModuleDialogOpen} onOpenChange={(open) => {
@@ -289,8 +294,8 @@ function LessonManager({ courseId, moduleId }: { courseId: string, moduleId: str
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between mb-4">
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
         <h4 className="font-bold text-sm text-muted-foreground uppercase tracking-tight">Lecciones</h4>
         <Dialog open={isDialogOpen} onOpenChange={(open) => {
           setIsDialogOpen(open);
@@ -309,16 +314,16 @@ function LessonManager({ courseId, moduleId }: { courseId: string, moduleId: str
               </DialogHeader>
               <div className="grid gap-4 py-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="l-title">Título o URL de Video</Label>
+                  <Label htmlFor="l-title">Título</Label>
                   <Input id="l-title" value={title} onChange={(e) => setTitle(e.target.value)} required />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="l-video">URL Video (Opcional si usas el título)</Label>
+                  <Label htmlFor="l-video">URL Video (YouTube, Vimeo...)</Label>
                   <Input id="l-video" value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)} placeholder="https://youtube.com/..." />
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="l-desc">Descripción / Contenido</Label>
-                  <Textarea id="l-desc" value={description} onChange={(e) => setDescription(e.target.value)} />
+                  <Textarea id="l-desc" value={description} onChange={(e) => setDescription(e.target.value)} rows={5} />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="grid gap-2">
@@ -343,29 +348,27 @@ function LessonManager({ courseId, moduleId }: { courseId: string, moduleId: str
         </Dialog>
       </div>
 
-      <div className="space-y-2">
+      <div className="space-y-4">
         {isLoading ? (
           <Loader2 className="h-4 w-4 animate-spin mx-auto" />
         ) : (
-          lessons?.map((lesson, idx) => {
-            const isUrl = (str: string) => str?.startsWith('http');
-            return (
-              <div key={lesson.id} className="flex items-center justify-between p-3 rounded-xl bg-[#F1F5F9] border border-transparent hover:border-border transition-all group">
+          lessons?.map((lesson, idx) => (
+            <div key={lesson.id} className="bg-[#F1F5F9]/50 rounded-2xl border p-4 space-y-4">
+              <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="bg-white p-2 rounded-lg shadow-sm">
-                    {isUrl(lesson.title) || lesson.videoUrl ? <Video className="h-4 w-4 text-primary" /> : <FileText className="h-4 w-4 text-muted-foreground" />}
+                  <div className="bg-white p-2 rounded-lg shadow-sm border">
+                    {lesson.videoUrl ? <Video className="h-4 w-4 text-primary" /> : <FileText className="h-4 w-4 text-muted-foreground" />}
                   </div>
                   <div>
-                    <p className="text-sm font-semibold truncate max-w-[200px]">
-                      {isUrl(lesson.title) ? 'Video Clase' : lesson.title}
-                    </p>
+                    <p className="text-sm font-semibold truncate max-w-[300px]">{lesson.title}</p>
                     <div className="flex items-center gap-2 mt-0.5">
                       <Badge variant="outline" className="text-[10px] h-4 py-0 px-1 bg-white">#{lesson.orderIndex ?? idx}</Badge>
                       <span className="text-[10px] text-muted-foreground">{lesson.durationInMinutes || 0} min</span>
+                      {lesson.isPremium && <Badge className="bg-amber-500 text-[9px] h-3.5 px-1">Premium</Badge>}
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex items-center gap-1">
                   <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(lesson)}>
                     <Edit className="h-3.5 w-3.5" />
                   </Button>
@@ -374,11 +377,171 @@ function LessonManager({ courseId, moduleId }: { courseId: string, moduleId: str
                   </Button>
                 </div>
               </div>
-            )
-          })
+
+              {/* Resource Manager Integration */}
+              <ResourceManager courseId={courseId} moduleId={moduleId} lessonId={lesson.id} />
+            </div>
+          ))
         )}
         {lessons?.length === 0 && !isLoading && (
           <p className="text-xs text-muted-foreground italic text-center py-4">Este módulo no tiene lecciones aún.</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ResourceManager({ courseId, moduleId, lessonId }: { courseId: string, moduleId: string, lessonId: string }) {
+  const db = useFirestore();
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingResource, setEditingResource] = useState<any>(null);
+
+  // Resource Form
+  const [title, setTitle] = useState('');
+  const [type, setType] = useState('pdf');
+  const [contentUrl, setContentUrl] = useState('');
+  const [order, setOrder] = useState('0');
+
+  const resourcesQuery = useMemoFirebase(() => {
+    if (!db) return null;
+    return query(collection(db, 'courses', courseId, 'modules', moduleId, 'lessons', lessonId, 'resources'), orderBy('orderIndex', 'asc'));
+  }, [db, courseId, moduleId, lessonId]);
+
+  const { data: resources, isLoading } = useCollection(resourcesQuery);
+
+  const resetForm = () => {
+    setEditingResource(null);
+    setTitle('');
+    setType('pdf');
+    setContentUrl('');
+    setOrder('0');
+  };
+
+  const handleSaveResource = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!db) return;
+
+    const resourceData = {
+      title,
+      type,
+      contentUrl,
+      orderIndex: parseInt(order),
+      lessonId,
+      updatedAt: serverTimestamp(),
+    };
+
+    if (editingResource) {
+      updateDocumentNonBlocking(doc(db, 'courses', courseId, 'modules', moduleId, 'lessons', lessonId, 'resources', editingResource.id), resourceData);
+    } else {
+      addDocumentNonBlocking(collection(db, 'courses', courseId, 'modules', moduleId, 'lessons', lessonId, 'resources'), {
+        ...resourceData,
+        createdAt: serverTimestamp(),
+      });
+    }
+    setIsDialogOpen(false);
+    resetForm();
+  };
+
+  const handleEdit = (resource: any) => {
+    setEditingResource(resource);
+    setTitle(resource.title || '');
+    setType(resource.type || 'pdf');
+    setContentUrl(resource.contentUrl || '');
+    setOrder(resource.orderIndex?.toString() || '0');
+    setIsDialogOpen(true);
+  };
+
+  const handleDelete = (resourceId: string) => {
+    if (!confirm('¿Eliminar este recurso?')) return;
+    deleteDocumentNonBlocking(doc(db, 'courses', courseId, 'modules', moduleId, 'lessons', lessonId, 'resources', resourceId));
+  };
+
+  const getIcon = (type: string) => {
+    switch (type) {
+      case 'pdf': return <FileDown className="h-3 w-3 text-red-500" />;
+      case 'word': return <FileText className="h-3 w-3 text-blue-500" />;
+      case 'ppt': return <Presentation className="h-3 w-3 text-orange-500" />;
+      default: return <LinkIcon className="h-3 w-3 text-gray-500" />;
+    }
+  };
+
+  return (
+    <div className="pt-2 border-t mt-2">
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-1">
+          <Paperclip className="h-3 w-3" /> Material de Apoyo
+        </p>
+        <Dialog open={isDialogOpen} onOpenChange={(open) => {
+          setIsDialogOpen(open);
+          if (!open) resetForm();
+        }}>
+          <DialogTrigger asChild>
+            <Button size="sm" variant="ghost" className="h-6 rounded-md gap-1 text-[10px] hover:bg-white border">
+              <Plus className="h-2 w-2" />
+              Añadir Recurso
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[400px] rounded-3xl">
+            <form onSubmit={handleSaveResource}>
+              <DialogHeader>
+                <DialogTitle>{editingResource ? 'Editar Recurso' : 'Nuevo Recurso'}</DialogTitle>
+                <DialogDescription>Añade guías, talleres o presentaciones.</DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="r-title">Nombre del Material</Label>
+                  <Input id="r-title" value={title} onChange={(e) => setTitle(e.target.value)} required placeholder="Ej: Guía de Ejercicios PDF" />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="r-type">Tipo de Archivo</Label>
+                  <Select value={type} onValueChange={setType}>
+                    <SelectTrigger className="rounded-xl">
+                      <SelectValue placeholder="Selecciona tipo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pdf">PDF (Guías, Talleres)</SelectItem>
+                      <SelectItem value="word">Word (Documentos)</SelectItem>
+                      <SelectItem value="ppt">PowerPoint (Presentaciones)</SelectItem>
+                      <SelectItem value="link">Enlace Externo</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="r-url">URL del Archivo</Label>
+                  <Input id="r-url" value={contentUrl} onChange={(e) => setContentUrl(e.target.value)} required placeholder="https://dropbox.com/s/..." />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="r-order">Orden</Label>
+                  <Input id="r-order" type="number" value={order} onChange={(e) => setOrder(e.target.value)} />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button type="submit" className="w-full rounded-xl h-11">Guardar Recurso</Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        {resources?.map((resource) => (
+          <div key={resource.id} className="flex items-center justify-between p-2 rounded-lg bg-white border text-[11px] group">
+            <div className="flex items-center gap-2">
+              {getIcon(resource.type)}
+              <span className="font-medium truncate max-w-[120px]">{resource.title}</span>
+            </div>
+            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => handleEdit(resource)}>
+                <Edit className="h-2.5 w-2.5" />
+              </Button>
+              <Button variant="ghost" size="icon" className="h-5 w-5 text-destructive" onClick={() => handleDelete(resource.id)}>
+                <Trash2 className="h-2.5 w-2.5" />
+              </Button>
+            </div>
+          </div>
+        ))}
+        {resources?.length === 0 && !isLoading && (
+          <p className="text-[10px] text-muted-foreground italic col-span-2">No hay recursos adicionales.</p>
         )}
       </div>
     </div>
