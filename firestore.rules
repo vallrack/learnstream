@@ -1,3 +1,4 @@
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -18,26 +19,22 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == instructorId;
     }
 
-    // ✅ Lee el rol desde el documento /users en Firestore.
+    // ✅ Verifica si el usuario existe y tiene el rol 'admin'
     function isAdmin() {
-      return isSignedIn() && 
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      let userPath = /databases/$(database)/documents/users/$(request.auth.uid);
+      return isSignedIn() && exists(userPath) && get(userPath).data.role == 'admin';
     }
 
     function isParentCoursePublished(courseId) {
-      // Usamos get() para verificar el estado del curso padre
-      let courseDoc = get(/databases/$(database)/documents/courses/$(courseId));
-      return courseDoc != null && courseDoc.data.isPublished == true;
+      let coursePath = /databases/$(database)/documents/courses/$(courseId);
+      return exists(coursePath) && get(coursePath).data.isPublished == true;
     }
     
     // ---------------------------------------------------------------------
     // REGLA CRÍTICA: Collection Group (Lecciones)
     // ---------------------------------------------------------------------
     match /{path=**}/lessons/{lessonId} {
-      // Permitir listar si está autenticado
       allow list: if isSignedIn();
-
-      // Get individual: Admin o lección publicada
       allow get: if isAdmin() || (resource.data.isPublished == true);
     }
 
@@ -68,15 +65,11 @@ service cloud.firestore {
     // ---------------------------------------------------------------------
 
     match /courses/{courseId} {
-      // Lectura: Si es público o si es el dueño/admin
       allow get: if (resource.data.isPublished == true) || (isSignedIn() && (isCourseInstructor(resource.data.instructorId) || isAdmin()));
       allow list: if true; 
-      
-      // Escritura: Dueño o Admin
       allow create: if (isSignedIn() && isCourseInstructor(request.resource.data.instructorId)) || isAdmin();
       allow update, delete: if isCourseInstructor(resource.data.instructorId) || isAdmin();
 
-      // Subcolecciones jerárquicas
       match /modules/{moduleId} {
         allow read: if isAdmin() || isParentCoursePublished(courseId) || (isSignedIn() && isCourseInstructor(get(/databases/$(database)/documents/courses/$(courseId)).data.instructorId));
         allow write: if isAdmin() || (isSignedIn() && isCourseInstructor(get(/databases/$(database)/documents/courses/$(courseId)).data.instructorId));
@@ -111,10 +104,6 @@ service cloud.firestore {
       allow create: if isSignedIn();
       allow read: if isAdmin() || (exists(/databases/$(database)/documents/student_error_logs/$(id)) && isOwner(get(/databases/$(database)/documents/student_error_logs/$(id)).data.userId));
     }
-
-    // ---------------------------------------------------------------------
-    // Colecciones Públicas / Administradas
-    // ---------------------------------------------------------------------
 
     match /careers/{id} { allow read: if true; allow write: if isAdmin(); }
     match /technology_trends/{id} { allow read: if true; allow write: if isAdmin(); }

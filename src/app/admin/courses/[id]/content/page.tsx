@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -27,7 +28,7 @@ import {
   deleteDocumentNonBlocking 
 } from '@/firebase';
 import { collection, query, orderBy, doc, serverTimestamp } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { 
   Dialog, 
   DialogContent, 
@@ -42,6 +43,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Progress } from '@/components/ui/progress';
 
 export default function CourseContentAdminPage() {
   const params = useParams();
@@ -337,6 +339,7 @@ function ResourceManager({ course, moduleId, lesson }: { course: any, moduleId: 
   const storage = useStorage();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
 
   const [title, setTitle] = useState('');
   const [type, setType] = useState('pdf');
@@ -354,22 +357,38 @@ function ResourceManager({ course, moduleId, lesson }: { course: any, moduleId: 
     if (!file || !storage) return;
 
     setUploading(true);
+    setUploadProgress(0);
+    
     try {
       const storageRef = ref(storage, `courses/${course.id}/resources/${Date.now()}_${file.name}`);
-      const snapshot = await uploadBytes(storageRef, file);
-      const url = await getDownloadURL(snapshot.ref);
-      setContentUrl(url);
-      if (!title) setTitle(file.name);
-      
-      // Auto-detect type
-      const ext = file.name.split('.').pop()?.toLowerCase();
-      if (ext === 'pdf') setType('pdf');
-      else if (['doc', 'docx'].includes(ext!)) setType('word');
-      else if (['ppt', 'pptx'].includes(ext!)) setType('ppt');
-    } catch (err) {
-      console.error("Upload failed", err);
-      alert("Hubo un error al subir el archivo. Revisa tu conexión.");
-    } finally {
+      const uploadTask = uploadBytesResumable(storageRef, file);
+
+      uploadTask.on('state_changed', 
+        (snapshot) => {
+          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          setUploadProgress(progress);
+        }, 
+        (error) => {
+          console.error("Upload task failed", error);
+          alert(`Error al subir: ${error.message}. Verifica los permisos de Storage en tu consola.`);
+          setUploading(false);
+        }, 
+        async () => {
+          const url = await getDownloadURL(uploadTask.snapshot.ref);
+          setContentUrl(url);
+          if (!title) setTitle(file.name);
+          
+          const ext = file.name.split('.').pop()?.toLowerCase();
+          if (ext === 'pdf') setType('pdf');
+          else if (['doc', 'docx'].includes(ext!)) setType('word');
+          else if (['ppt', 'pptx', 'pps', 'ppsx'].includes(ext!)) setType('ppt');
+          
+          setUploading(false);
+        }
+      );
+    } catch (err: any) {
+      console.error("General upload error", err);
+      alert("Hubo un error inesperado al iniciar la subida.");
       setUploading(false);
     }
   };
@@ -403,6 +422,7 @@ function ResourceManager({ course, moduleId, lesson }: { course: any, moduleId: 
     setTitle('');
     setType('pdf');
     setContentUrl('');
+    setUploadProgress(0);
   };
 
   const handleDeleteResource = (resourceId: string) => {
@@ -436,15 +456,21 @@ function ResourceManager({ course, moduleId, lesson }: { course: any, moduleId: 
                 {type !== 'link' && (
                   <div className="space-y-2">
                     <Label>Subir Archivo</Label>
-                    <div className="border-2 border-dashed rounded-xl p-4 text-center min-h-[80px] flex items-center justify-center">
+                    <div className="border-2 border-dashed rounded-xl p-4 text-center min-h-[100px] flex flex-col items-center justify-center gap-4">
                       {uploading ? (
-                        <div className="flex flex-col items-center gap-2">
+                        <div className="flex flex-col items-center gap-3 w-full max-w-[200px]">
                           <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                          <span className="text-[10px] text-muted-foreground">Subiendo archivo...</span>
+                          <div className="w-full">
+                            <Progress value={uploadProgress} className="h-1" />
+                            <span className="text-[10px] text-muted-foreground mt-1 block">{Math.round(uploadProgress)}% subido</span>
+                          </div>
                         </div>
                       ) : contentUrl ? (
-                        <div className="flex items-center justify-center gap-2 text-emerald-600 text-xs font-bold bg-emerald-50 w-full p-2 rounded-lg">
-                          Archivo listo <X className="h-3 w-3 cursor-pointer" onClick={() => setContentUrl('')} />
+                        <div className="flex flex-col items-center gap-2">
+                          <div className="flex items-center justify-center gap-2 text-emerald-600 text-xs font-bold bg-emerald-50 px-3 py-1 rounded-full">
+                            Archivo listo <X className="h-3 w-3 cursor-pointer" onClick={() => setContentUrl('')} />
+                          </div>
+                          <p className="text-[10px] text-muted-foreground truncate max-w-[200px]">{contentUrl.split('/').pop()}</p>
                         </div>
                       ) : (
                         <>
