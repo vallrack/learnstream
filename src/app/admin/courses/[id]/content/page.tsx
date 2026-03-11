@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -17,13 +16,13 @@ import {
   Link as LinkIcon,
   X,
   FileText,
-  Presentation
 } from 'lucide-react';
 import { 
   useCollection, 
   useDoc, 
   useFirestore, 
   useStorage,
+  useUser,
   useMemoFirebase, 
   addDocumentNonBlocking, 
   updateDocumentNonBlocking, 
@@ -52,11 +51,20 @@ export default function CourseContentAdminPage() {
   const router = useRouter();
   const courseId = params.id as string;
   const db = useFirestore();
+  const { user } = useUser();
 
   const [isModuleDialogOpen, setIsModuleDialogOpen] = useState(false);
   const [editingModule, setEditingModule] = useState<any>(null);
   const [moduleTitle, setModuleTitle] = useState('');
   const [moduleOrder, setModuleOrder] = useState('0');
+
+  // Verificar rol de admin
+  const profileRef = useMemoFirebase(() => {
+    if (!db || !user?.uid) return null;
+    return doc(db, 'users', user.uid);
+  }, [db, user?.uid]);
+  const { data: profile } = useDoc(profileRef);
+  const isAdmin = profile?.role === 'admin';
 
   const courseRef = useMemoFirebase(() => {
     if (!db || !courseId) return null;
@@ -102,8 +110,10 @@ export default function CourseContentAdminPage() {
   };
 
   const handleDeleteModule = (moduleId: string) => {
-    if (!db || !confirm('¿Estás seguro de eliminar este módulo?')) return;
-    deleteDocumentNonBlocking(doc(db, 'courses', courseId, 'modules', moduleId));
+    if (!db || !isAdmin) return;
+    if (confirm('¿Estás seguro de eliminar este módulo y todo su contenido?')) {
+      deleteDocumentNonBlocking(doc(db, 'courses', courseId, 'modules', moduleId));
+    }
   };
 
   if (isCourseLoading) {
@@ -193,16 +203,18 @@ export default function CourseContentAdminPage() {
                       }}>
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" className="text-destructive" onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteModule(module.id);
-                      }}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      {isAdmin && (
+                        <Button variant="ghost" size="icon" className="text-destructive" onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteModule(module.id);
+                        }}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
                     </div>
                   </div>
                   <AccordionContent className="pb-6 border-t pt-4">
-                    <LessonManager course={course} moduleId={module.id} />
+                    <LessonManager course={course} moduleId={module.id} isAdmin={isAdmin} />
                   </AccordionContent>
                 </AccordionItem>
               ))}
@@ -214,7 +226,7 @@ export default function CourseContentAdminPage() {
   );
 }
 
-function LessonManager({ course, moduleId }: { course: any, moduleId: string }) {
+function LessonManager({ course, moduleId, isAdmin }: { course: any, moduleId: string, isAdmin: boolean }) {
   const db = useFirestore();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingLesson, setEditingLesson] = useState<any>(null);
@@ -284,8 +296,10 @@ function LessonManager({ course, moduleId }: { course: any, moduleId: string }) 
   };
 
   const handleDelete = (lessonId: string) => {
-    if (!db || !confirm('¿Eliminar lección?')) return;
-    deleteDocumentNonBlocking(doc(db, 'courses', course.id, 'modules', moduleId, 'lessons', lessonId));
+    if (!db || !isAdmin) return;
+    if (confirm('¿Eliminar lección?')) {
+      deleteDocumentNonBlocking(doc(db, 'courses', course.id, 'modules', moduleId, 'lessons', lessonId));
+    }
   };
 
   return (
@@ -325,10 +339,12 @@ function LessonManager({ course, moduleId }: { course: any, moduleId: string }) 
               <p className="font-bold text-sm">{lesson.title}</p>
               <div className="flex gap-1">
                 <Button variant="ghost" size="icon" onClick={() => handleEdit(lesson)}><Edit className="h-3 w-3" /></Button>
-                <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDelete(lesson.id)}><Trash2 className="h-3 w-3" /></Button>
+                {isAdmin && (
+                  <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDelete(lesson.id)}><Trash2 className="h-3 w-3" /></Button>
+                )}
               </div>
             </div>
-            <ResourceManager course={course} moduleId={moduleId} lesson={lesson} />
+            <ResourceManager course={course} moduleId={moduleId} lesson={lesson} isAdmin={isAdmin} />
           </div>
         ))}
       </div>
@@ -336,7 +352,7 @@ function LessonManager({ course, moduleId }: { course: any, moduleId: string }) 
   );
 }
 
-function ResourceManager({ course, moduleId, lesson }: { course: any, moduleId: string, lesson: any }) {
+function ResourceManager({ course, moduleId, lesson, isAdmin }: { course: any, moduleId: string, lesson: any, isAdmin: boolean }) {
   const db = useFirestore();
   const storage = useStorage();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -428,8 +444,10 @@ function ResourceManager({ course, moduleId, lesson }: { course: any, moduleId: 
   };
 
   const handleDeleteResource = (resourceId: string) => {
-    if (!db || !confirm('¿Eliminar recurso?')) return;
-    deleteDocumentNonBlocking(doc(db, 'courses', course.id, 'modules', moduleId, 'lessons', lesson.id, 'resources', resourceId));
+    if (!db || !isAdmin) return;
+    if (confirm('¿Eliminar recurso?')) {
+      deleteDocumentNonBlocking(doc(db, 'courses', course.id, 'modules', moduleId, 'lessons', lesson.id, 'resources', resourceId));
+    }
   };
 
   return (
@@ -523,9 +541,11 @@ function ResourceManager({ course, moduleId, lesson }: { course: any, moduleId: 
               {res.type === 'link' ? <LinkIcon className="h-3 w-3" /> : res.type === 'pdf' ? <FileText className="h-3 w-3 text-red-500" /> : <Paperclip className="h-3 w-3" />}
               {res.title}
             </span>
-            <Button variant="ghost" size="icon" className="h-4 w-4 opacity-0 group-hover:opacity-100 text-destructive" onClick={() => handleDeleteResource(res.id)}>
-              <Trash2 className="h-2.5 w-2.5" />
-            </Button>
+            {isAdmin && (
+              <Button variant="ghost" size="icon" className="h-4 w-4 opacity-0 group-hover:opacity-100 text-destructive" onClick={() => handleDeleteResource(res.id)}>
+                <Trash2 className="h-2.5 w-2.5" />
+              </Button>
+            )}
           </div>
         ))}
       </div>

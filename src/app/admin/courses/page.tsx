@@ -3,11 +3,10 @@
 import { useState } from 'react';
 import { Navbar } from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
-import { Plus, Edit, Trash2, MoreHorizontal, LayoutGrid, List as ListIcon, Loader2, BookOpen } from 'lucide-react';
+import { Plus, Edit, Trash2, BookOpen, Loader2, List as ListIcon } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { useCollection, useFirestore, useUser, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
+import { useCollection, useFirestore, useUser, useDoc, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, serverTimestamp, doc } from 'firebase/firestore';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -21,6 +20,14 @@ export default function AdminCoursesPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCourseId, setEditingCourseId] = useState<string | null>(null);
   
+  // Perfil para verificar rol
+  const profileRef = useMemoFirebase(() => {
+    if (!db || !user?.uid) return null;
+    return doc(db, 'users', user.uid);
+  }, [db, user?.uid]);
+  const { data: profile } = useDoc(profileRef);
+  const isAdmin = profile?.role === 'admin';
+
   // Form state
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -91,8 +98,10 @@ export default function AdminCoursesPage() {
   };
 
   const handleDeleteCourse = (courseId: string) => {
-    if (!db) return;
-    deleteDocumentNonBlocking(doc(db, 'courses', courseId));
+    if (!db || !isAdmin) return;
+    if (confirm('¿Estás seguro de que quieres eliminar este curso permanentemente?')) {
+      deleteDocumentNonBlocking(doc(db, 'courses', courseId));
+    }
   };
 
   return (
@@ -214,14 +223,16 @@ export default function AdminCoursesPage() {
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-8 w-8 text-destructive"
-                          onClick={() => handleDeleteCourse(course.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        {isAdmin && (
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8 text-destructive"
+                            onClick={() => handleDeleteCourse(course.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>

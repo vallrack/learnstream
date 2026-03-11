@@ -3,15 +3,26 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { PlayCircle, User, Crown, LayoutDashboard, LogOut, LogIn } from 'lucide-react';
-import { useUser, useAuth } from '@/firebase';
+import { useUser, useAuth, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { signOut } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
+import { doc } from 'firebase/firestore';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 export function Navbar() {
   const { user, isUserLoading } = useUser();
   const auth = useAuth();
+  const db = useFirestore();
   const router = useRouter();
+
+  // Consultar perfil para verificar rol
+  const profileRef = useMemoFirebase(() => {
+    if (!db || !user?.uid) return null;
+    return doc(db, 'users', user.uid);
+  }, [db, user?.uid]);
+  const { data: profile } = useDoc(profileRef);
+
+  const isAdmin = profile?.role === 'admin';
 
   const handleLogout = async () => {
     await signOut(auth);
@@ -36,7 +47,7 @@ export function Navbar() {
       </div>
       
       <div className="flex items-center gap-4">
-        {user && (
+        {user && isAdmin && (
           <Link href="/admin">
             <Button variant="ghost" size="sm" className="hidden lg:flex gap-2">
               <LayoutDashboard className="h-4 w-4" />
