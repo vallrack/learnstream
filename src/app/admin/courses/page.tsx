@@ -8,7 +8,7 @@ import { Plus, Edit, Trash2, MoreHorizontal, LayoutGrid, List as ListIcon, Loade
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { useCollection, useFirestore, useUser, useMemoFirebase, addDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
+import { useCollection, useFirestore, useUser, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, serverTimestamp, doc } from 'firebase/firestore';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -19,6 +19,7 @@ export default function AdminCoursesPage() {
   const { user } = useUser();
   const db = useFirestore();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingCourseId, setEditingCourseId] = useState<string | null>(null);
   
   // Form state
   const [title, setTitle] = useState('');
@@ -34,31 +35,60 @@ export default function AdminCoursesPage() {
 
   const { data: courses, isLoading } = useCollection(coursesQuery);
 
-  const handleCreateCourse = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!db || !user) return;
-
-    const courseData = {
-      title,
-      description,
-      category,
-      isFree,
-      imageUrl: imageUrl || `https://picsum.photos/seed/${Math.random()}/800/450`,
-      instructorId: user.uid,
-      instructorName: user.displayName || user.email,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    };
-
-    addDocumentNonBlocking(collection(db, 'courses'), courseData);
-    
-    // Reset form
+  const resetForm = () => {
+    setEditingCourseId(null);
     setTitle('');
     setDescription('');
     setCategory('');
     setImageUrl('');
     setIsFree(true);
+  };
+
+  const handleEditClick = (course: any) => {
+    setEditingCourseId(course.id);
+    setTitle(course.title || '');
+    setDescription(course.description || '');
+    setCategory(course.category || '');
+    setImageUrl(course.thumbnailDataUrl || course.imageUrl || '');
+    setIsFree(course.isFree ?? true);
+    setIsDialogOpen(true);
+  };
+
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!db || !user) return;
+
+    const courseData: any = {
+      title,
+      description,
+      category,
+      isFree,
+      updatedAt: serverTimestamp(),
+    };
+
+    // Solo añadimos la imagen si el usuario proporcionó una URL nueva o estamos creando
+    if (imageUrl) {
+      if (imageUrl.startsWith('data:')) {
+        courseData.thumbnailDataUrl = imageUrl;
+      } else {
+        courseData.imageUrl = imageUrl;
+      }
+    }
+
+    if (editingCourseId) {
+      updateDocumentNonBlocking(doc(db, 'courses', editingCourseId), courseData);
+    } else {
+      courseData.instructorId = user.uid;
+      courseData.instructorName = user.displayName || user.email;
+      courseData.createdAt = serverTimestamp();
+      if (!courseData.imageUrl && !courseData.thumbnailDataUrl) {
+        courseData.imageUrl = `https://picsum.photos/seed/${Math.random()}/800/450`;
+      }
+      addDocumentNonBlocking(collection(db, 'courses'), courseData);
+    }
+    
     setIsDialogOpen(false);
+    resetForm();
   };
 
   const handleDeleteCourse = (courseId: string) => {
@@ -77,18 +107,23 @@ export default function AdminCoursesPage() {
             <p className="text-muted-foreground">Crea, edita y organiza tu contenido educativo real.</p>
           </div>
           
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <Dialog open={isDialogOpen} onOpenChange={(open) => {
+            setIsDialogOpen(open);
+            if (!open) resetForm();
+          }}>
             <DialogTrigger asChild>
-              <Button className="bg-primary hover:bg-primary/90 gap-2 rounded-xl h-11">
+              <Button onClick={() => resetForm()} className="bg-primary hover:bg-primary/90 gap-2 rounded-xl h-11">
                 <Plus className="h-4 w-4" />
                 Crear Nuevo Curso
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[500px] rounded-3xl">
-              <form onSubmit={handleCreateCourse}>
+              <form onSubmit={handleFormSubmit}>
                 <DialogHeader>
-                  <DialogTitle>Nuevo Curso</DialogTitle>
-                  <DialogDescription>Completa los detalles para publicar tu nuevo curso.</DialogDescription>
+                  <DialogTitle>{editingCourseId ? 'Editar Curso' : 'Nuevo Curso'}</DialogTitle>
+                  <DialogDescription>
+                    {editingCourseId ? 'Modifica los detalles de tu curso.' : 'Completa los detalles para publicar tu nuevo curso.'}
+                  </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
                   <div className="grid gap-2">
@@ -100,7 +135,7 @@ export default function AdminCoursesPage() {
                     <Input id="category" value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Ej: Desarrollo, Diseño..." required className="rounded-xl" />
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="imageUrl">URL de la Imagen (Opcional)</Label>
+                    <Label htmlFor="imageUrl">URL de la Imagen o Base64</Label>
                     <Input id="imageUrl" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="https://ejemplo.com/imagen.jpg" className="rounded-xl" />
                   </div>
                   <div className="grid gap-2">
@@ -119,7 +154,9 @@ export default function AdminCoursesPage() {
                   </div>
                 </div>
                 <DialogFooter>
-                  <Button type="submit" className="w-full rounded-xl h-11">Guardar Curso</Button>
+                  <Button type="submit" className="w-full rounded-xl h-11">
+                    {editingCourseId ? 'Actualizar Curso' : 'Guardar Curso'}
+                  </Button>
                 </DialogFooter>
               </form>
             </DialogContent>
@@ -165,7 +202,14 @@ export default function AdminCoursesPage() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground"><Edit className="h-4 w-4" /></Button>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8 text-muted-foreground hover:text-primary"
+                          onClick={() => handleEditClick(course)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
                         <Button 
                           variant="ghost" 
                           size="icon" 
