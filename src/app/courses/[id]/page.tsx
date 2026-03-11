@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Navbar } from '@/components/layout/Navbar';
@@ -149,7 +150,6 @@ function CourseCurriculum({ courseId }: { courseId: string }) {
 
   const modulesQuery = useMemoFirebase(() => {
     if (!db) return null;
-    // Ajustado para usar 'orderIndex' basado en la captura del usuario
     return query(collection(db, 'courses', courseId, 'modules'), orderBy('orderIndex', 'asc'));
   }, [db, courseId]);
 
@@ -193,7 +193,6 @@ function ModuleLessons({ courseId, moduleId }: { courseId: string, moduleId: str
 
   const lessonsQuery = useMemoFirebase(() => {
     if (!db) return null;
-    // Ajustado para intentar 'orderIndex' o caer en 'order' si existe
     return query(collection(db, 'courses', courseId, 'modules', moduleId, 'lessons'), orderBy('orderIndex', 'asc'));
   }, [db, courseId, moduleId]);
 
@@ -215,7 +214,7 @@ function ModuleLessons({ courseId, moduleId }: { courseId: string, moduleId: str
             </div>
           </div>
           <Button variant="ghost" size="sm" className="rounded-lg h-8 gap-1" asChild>
-             <Link href={`/courses/${courseId}/learn/${lesson.id}`}>
+             <Link href={`/courses/${courseId}/learn/${lesson.id}?moduleId=${moduleId}`}>
                Ver
                <ChevronRight className="h-4 w-4" />
              </Link>
