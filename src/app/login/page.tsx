@@ -47,7 +47,7 @@ export default function LoginPage() {
           email: authUser.email || null,
           profileImageUrl: authUser.photoURL || `https://picsum.photos/seed/${authUser.uid}/200/200`,
           createdAt: serverTimestamp(),
-          isPremiumSubscriber: authUser.isAnonymous ? false : true, // Los invitados no son premium por defecto
+          isPremiumSubscriber: false, // Los invitados no son premium por defecto
           role: 'student'
         }, { merge: true });
       }
@@ -166,6 +166,7 @@ export default function LoginPage() {
                       <Input 
                         id="password" 
                         type="password" 
+                        placeholder="••••••••"
                         required 
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
