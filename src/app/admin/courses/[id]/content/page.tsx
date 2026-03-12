@@ -59,7 +59,6 @@ export default function CourseContentAdminPage() {
   const [moduleTitle, setModuleTitle] = useState('');
   const [moduleOrder, setModuleOrder] = useState('0');
 
-  // Verificar rol de admin
   const profileRef = useMemoFirebase(() => {
     if (!db || !user?.uid) return null;
     return doc(db, 'users', user.uid);
@@ -195,7 +194,7 @@ export default function CourseContentAdminPage() {
                       </div>
                     </AccordionTrigger>
                     <div className="flex items-center gap-1">
-                      <Button variant="ghost" size="icon" onClick={(e) => {
+                      <Button variant="ghost" size="icon" className="h-9 w-9" onClick={(e) => {
                         e.stopPropagation();
                         setEditingModule(module);
                         setModuleTitle(module.title);
@@ -205,7 +204,7 @@ export default function CourseContentAdminPage() {
                         <Edit className="h-4 w-4" />
                       </Button>
                       {isAdmin && (
-                        <Button variant="ghost" size="icon" className="text-destructive" onClick={(e) => {
+                        <Button variant="ghost" size="icon" className="h-9 w-9 text-destructive hover:bg-destructive/10" onClick={(e) => {
                           e.stopPropagation();
                           handleDeleteModule(module.id);
                         }}>
@@ -339,9 +338,9 @@ function LessonManager({ course, moduleId, isAdmin }: { course: any, moduleId: s
             <div className="flex items-center justify-between mb-2">
               <p className="font-bold text-sm">{lesson.title}</p>
               <div className="flex gap-1">
-                <Button variant="ghost" size="icon" onClick={() => handleEdit(lesson)}><Edit className="h-3 w-3" /></Button>
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(lesson)}><Edit className="h-4 w-4" /></Button>
                 {isAdmin && (
-                  <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDelete(lesson.id)}><Trash2 className="h-3 w-3" /></Button>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => handleDelete(lesson.id)}><Trash2 className="h-4 w-4" /></Button>
                 )}
               </div>
             </div>
@@ -389,7 +388,7 @@ function ResourceManager({ course, moduleId, lesson, isAdmin }: { course: any, m
         }, 
         (error) => {
           console.error("Upload task failed", error);
-          alert(`Error al subir: ${error.message}. Verifica los permisos de Storage.`);
+          alert(`Error al subir: ${error.message}.`);
           setUploading(false);
         }, 
         async () => {
@@ -407,7 +406,6 @@ function ResourceManager({ course, moduleId, lesson, isAdmin }: { course: any, m
       );
     } catch (err: any) {
       console.error("General upload error", err);
-      alert("Hubo un error inesperado al iniciar la subida.");
       setUploading(false);
     }
   };
@@ -543,8 +541,16 @@ function ResourceManager({ course, moduleId, lesson, isAdmin }: { course: any, m
               {res.title}
             </span>
             {isAdmin && (
-              <Button variant="ghost" size="icon" className="h-4 w-4 opacity-0 group-hover:opacity-100 text-destructive" onClick={() => handleDeleteResource(res.id)}>
-                <Trash2 className="h-2.5 w-2.5" />
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-8 w-8 text-destructive hover:bg-destructive/10" 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDeleteResource(res.id);
+                }}
+              >
+                <Trash2 className="h-4 w-4" />
               </Button>
             )}
           </div>

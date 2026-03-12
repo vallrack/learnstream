@@ -15,7 +15,7 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    // Verifica el rol de admin de forma directa para evitar recursión
+    // Función Admin robusta que evita recursión
     function isAdmin() {
       return isSignedIn() && 
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
@@ -25,22 +25,16 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == instructorId;
     }
 
-    function isParentCoursePublished(courseId) {
-      let coursePath = /databases/$(database)/documents/courses/$(courseId);
-      return exists(coursePath) && get(coursePath).data.isPublished == true;
-    }
-    
     // ---------------------------------------------------------------------
     // Colecciones de Usuario
     // ---------------------------------------------------------------------
 
     match /users/{userId} {
       allow create: if isOwner(userId);
-      // Evitamos llamar a isAdmin() aquí para prevenir recursión infinita
       allow get: if isOwner(userId) || (isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
       allow list: if isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
       allow update: if isOwner(userId) || (isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
-      allow delete: if false; 
+      allow delete: if isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
     // ---------------------------------------------------------------------
@@ -48,21 +42,21 @@ service cloud.firestore {
     // ---------------------------------------------------------------------
 
     match /courses/{courseId} {
-      allow get: if (resource.data.isPublished == true) || (isSignedIn() && (isCourseInstructor(resource.data.instructorId) || isAdmin()));
-      allow list: if true; 
+      // Los cursos son legibles por todos (metadatos)
+      allow read: if true;
       allow create: if isSignedIn();
-      allow update, delete: if isCourseInstructor(resource.data.instructorId) || isAdmin();
+      allow update, delete: if isAdmin() || isCourseInstructor(resource.data.instructorId);
 
       match /modules/{moduleId} {
-        allow read: if isAdmin() || isParentCoursePublished(courseId) || isCourseInstructor(get(/databases/$(database)/documents/courses/$(courseId)).data.instructorId);
+        allow read: if true;
         allow write: if isAdmin() || isCourseInstructor(get(/databases/$(database)/documents/courses/$(courseId)).data.instructorId);
 
         match /lessons/{lessonId} {
-            allow read: if isAdmin() || isParentCoursePublished(courseId) || isCourseInstructor(get(/databases/$(database)/documents/courses/$(courseId)).data.instructorId);
+            allow read: if true;
             allow write: if isAdmin() || isCourseInstructor(get(/databases/$(database)/documents/courses/$(courseId)).data.instructorId);
 
             match /resources/{resourceId} {
-                allow read: if isAdmin() || isParentCoursePublished(courseId) || isCourseInstructor(get(/databases/$(database)/documents/courses/$(courseId)).data.instructorId);
+                allow read: if true;
                 allow write: if isAdmin() || isCourseInstructor(get(/databases/$(database)/documents/courses/$(courseId)).data.instructorId);
             }
         }
@@ -73,21 +67,8 @@ service cloud.firestore {
     // Otras colecciones
     // ---------------------------------------------------------------------
 
-    match /coding_challenges/{challengeId} { 
-      allow read: if true; 
-      allow create: if isSignedIn();
-      allow update, delete: if isAdmin() || (isSignedIn() && resource.data.instructorId == request.auth.uid);
-    }
-
-    match /users/{userId}/user_progress/{id} {
-      allow read, write: if isOwner(userId) || isAdmin();
-    }
-
-    match /student_error_logs/{id} {
-      allow create: if isSignedIn();
-      allow read: if isAdmin();
-    }
-
+    match /coding_challenges/{id} { allow read: if true; allow write: if isAdmin(); }
+    match /users/{userId}/user_progress/{id} { allow read, write: if isOwner(userId) || isAdmin(); }
     match /careers/{id} { allow read: if true; allow write: if isAdmin(); }
     match /technology_trends/{id} { allow read: if true; allow write: if isAdmin(); }
     match /code_review_highlights/{id} { allow read: if true; allow write: if isAdmin(); }
