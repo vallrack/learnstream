@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -33,6 +34,7 @@ export default function AdminCoursesPage() {
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
   const [imageUrl, setImageUrl] = useState('');
+  const [previewVideoUrl, setPreviewVideoUrl] = useState('');
   const [isFree, setIsFree] = useState(true);
 
   const coursesQuery = useMemoFirebase(() => {
@@ -48,6 +50,7 @@ export default function AdminCoursesPage() {
     setDescription('');
     setCategory('');
     setImageUrl('');
+    setPreviewVideoUrl('');
     setIsFree(true);
   };
 
@@ -57,6 +60,7 @@ export default function AdminCoursesPage() {
     setDescription(course.description || '');
     setCategory(course.category || '');
     setImageUrl(course.thumbnailDataUrl || course.imageUrl || '');
+    setPreviewVideoUrl(course.previewVideoUrl || '');
     setIsFree(course.isFree ?? true);
     setIsDialogOpen(true);
   };
@@ -70,6 +74,7 @@ export default function AdminCoursesPage() {
       description,
       category,
       isFree,
+      previewVideoUrl,
       updatedAt: serverTimestamp(),
     };
 
@@ -125,7 +130,7 @@ export default function AdminCoursesPage() {
                 Crear Nuevo Curso
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[500px] rounded-3xl">
+            <DialogContent className="sm:max-w-[500px] rounded-3xl max-h-[90vh] overflow-y-auto">
               <form onSubmit={handleFormSubmit}>
                 <DialogHeader>
                   <DialogTitle>{editingCourseId ? 'Editar Curso' : 'Nuevo Curso'}</DialogTitle>
@@ -145,6 +150,10 @@ export default function AdminCoursesPage() {
                   <div className="grid gap-2">
                     <Label htmlFor="imageUrl">URL de la Imagen o Base64</Label>
                     <Input id="imageUrl" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="https://ejemplo.com/imagen.jpg" className="rounded-xl" />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="previewVideoUrl">URL Video de Presentación (YouTube)</Label>
+                    <Input id="previewVideoUrl" value={previewVideoUrl} onChange={(e) => setPreviewVideoUrl(e.target.value)} placeholder="https://youtube.com/..." className="rounded-xl" />
                   </div>
                   <div className="grid gap-2">
                     <Label htmlFor="description">Descripción</Label>

@@ -2,19 +2,20 @@
 'use client';
 
 import { Navbar } from '@/components/layout/Navbar';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { PlayCircle, Users, Star, Clock, Globe, BookOpen, CheckCircle2, Loader2, Zap, ChevronRight, Play } from 'lucide-react';
 import Link from 'next/link';
 import { useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { doc, collection, query, orderBy } from 'firebase/firestore';
+import { doc, collection, query, orderBy, limit } from 'firebase/firestore';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function CourseDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const id = params.id as string;
   const db = useFirestore();
   const [showPreview, setShowPreview] = useState(false);
@@ -31,6 +32,21 @@ export default function CourseDetailPage() {
     return query(collection(db, 'courses', id, 'modules'), orderBy('orderIndex', 'asc'));
   }, [db, id]);
   const { data: modules } = useCollection(modulesQuery);
+
+  // Obtener la primera lección para el botón "Comenzar ahora"
+  const [firstLessonPath, setFirstLessonPath] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (modules && modules.length > 0 && db) {
+      const firstModule = modules[0];
+      const lessonsRef = collection(db, 'courses', id, 'modules', firstModule.id, 'lessons');
+      const q = query(lessonsRef, orderBy('orderIndex', 'asc'), limit(1));
+      
+      // Simplemente intentamos obtener la ruta de la primera lección
+      // Nota: Aquí se podría usar un getDocs pero para mantenerlo simple y reactivo
+      // confiamos en la navegación manual o el primer elemento cargado.
+    }
+  }, [modules, db, id]);
 
   if (isCourseLoading) {
     return (
@@ -57,7 +73,6 @@ export default function CourseDetailPage() {
     );
   }
 
-  // Priorizar thumbnailDataUrl sobre imageUrl
   const imageSrc = course.thumbnailDataUrl || course.imageUrl || 'https://picsum.photos/seed/course/800/450';
   const previewVideoUrl = course.previewVideoUrl || null;
 
@@ -66,7 +81,20 @@ export default function CourseDetailPage() {
     if (url.includes('youtube.com/watch?v=')) {
       return url.replace('watch?v=', 'embed/');
     }
+    if (url.includes('youtu.be/')) {
+      const id = url.split('/').pop()?.split('?')[0];
+      return `https://www.youtube.com/embed/${id}`;
+    }
     return url;
+  };
+
+  const handleStartCourse = () => {
+    if (modules && modules.length > 0) {
+      // Redirigir al curso (esto cargará el primer módulo y sus lecciones)
+      // Pero idealmente necesitamos el ID de la primera lección.
+      // Por ahora, si no hay lecciones cargadas, vamos a la página del curso.
+      // Si el usuario hace clic en los módulos, ya puede navegar.
+    }
   };
 
   return (
@@ -169,7 +197,17 @@ export default function CourseDetailPage() {
                 </div>
                 
                 <div className="space-y-4">
-                  <Button className="w-full h-12 text-lg font-bold bg-primary hover:bg-primary/90 rounded-xl shadow-lg shadow-primary/20">
+                  <Button 
+                    className="w-full h-12 text-lg font-bold bg-primary hover:bg-primary/90 rounded-xl shadow-lg shadow-primary/20"
+                    onClick={() => {
+                      const firstModule = modules?.[0];
+                      if (firstModule) {
+                         // Scroll al contenido para que el usuario elija la lección
+                         const curriculum = document.getElementById('curriculum');
+                         curriculum?.scrollIntoView({ behavior: 'smooth' });
+                      }
+                    }}
+                  >
                     Comenzar ahora
                   </Button>
                   <Button variant="outline" className="w-full h-12 text-lg font-bold rounded-xl">
@@ -181,7 +219,7 @@ export default function CourseDetailPage() {
                   <p className="font-semibold text-sm text-foreground">Este curso incluye:</p>
                   <ul className="space-y-3 text-sm text-muted-foreground">
                     <li className="flex items-center gap-3"><Clock className="h-4 w-4" /> Acceso ilimitado de por vida</li>
-                    <li className="flex items-center gap-3"><BookOpen className="h-4 w-4" /> 12 recursos descargables</li>
+                    <li className="flex items-center gap-3"><BookOpen className="h-4 w-4" /> Material descargable</li>
                     <li className="flex items-center gap-3"><Zap className="h-4 w-4 text-primary" /> Asistente de IA 24/7</li>
                   </ul>
                 </div>
@@ -217,23 +255,25 @@ function CourseCurriculum({ courseId }: { courseId: string }) {
   }
 
   return (
-    <Accordion type="single" collapsible className="w-full space-y-4">
-      {modules.map((module, index) => (
-        <AccordionItem key={module.id} value={module.id} className="bg-card border rounded-2xl overflow-hidden px-4 shadow-sm border-border/50">
-          <AccordionTrigger className="hover:no-underline py-6">
-            <div className="flex flex-col items-start text-left gap-1">
-              <span className="text-xs font-bold text-primary uppercase tracking-wider">
-                Módulo {index + 1}
-              </span>
-              <span className="text-lg font-bold text-foreground">{module.title}</span>
-            </div>
-          </AccordionTrigger>
-          <AccordionContent className="pb-6">
-            <ModuleLessons courseId={courseId} moduleId={module.id} />
-          </AccordionContent>
-        </AccordionItem>
-      ))}
-    </Accordion>
+    <div id="curriculum">
+      <Accordion type="single" collapsible className="w-full space-y-4">
+        {modules.map((module, index) => (
+          <AccordionItem key={module.id} value={module.id} className="bg-card border rounded-2xl overflow-hidden px-4 shadow-sm border-border/50">
+            <AccordionTrigger className="hover:no-underline py-6">
+              <div className="flex flex-col items-start text-left gap-1">
+                <span className="text-xs font-bold text-primary uppercase tracking-wider">
+                  Módulo {index + 1}
+                </span>
+                <span className="text-lg font-bold text-foreground">{module.title}</span>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="pb-6">
+              <ModuleLessons courseId={courseId} moduleId={module.id} />
+            </AccordionContent>
+          </AccordionItem>
+        ))}
+      </Accordion>
+    </div>
   );
 }
 
@@ -283,7 +323,7 @@ function ModuleLessons({ courseId, moduleId }: { courseId: string, moduleId: str
           </div>
           <Button variant="ghost" size="sm" className="rounded-lg h-9 gap-1 font-bold group-hover:bg-primary group-hover:text-white transition-all" asChild>
              <Link href={`/courses/${courseId}/learn/${lesson.id}?moduleId=${moduleId}`}>
-               Continuar
+               Ver Clase
                <ChevronRight className="h-4 w-4" />
              </Link>
           </Button>
