@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import { Navbar } from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
-import { Plus, Edit, Trash2, Code2, Loader2, Search, Filter, Lock, Unlock } from 'lucide-react';
+import { Plus, Edit, Trash2, Code2, Loader2, Search, Filter, Lock, Unlock, Info } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { useCollection, useFirestore, useUser, useDoc, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
@@ -16,6 +16,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { TECH_STACK } from '@/lib/languages';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 export default function AdminChallengesPage() {
   const { user } = useUser();
@@ -127,40 +128,44 @@ export default function AdminChallengesPage() {
                 Nuevo Desafío
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[700px] rounded-3xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="sm:max-w-[750px] rounded-[2.5rem] max-h-[90vh] overflow-y-auto">
               <form onSubmit={handleFormSubmit}>
                 <DialogHeader>
-                  <DialogTitle>{editingId ? 'Editar Desafío' : 'Crear Desafío'}</DialogTitle>
-                  <DialogDescription>Completa los detalles técnicos del reto.</DialogDescription>
+                  <DialogTitle className="text-2xl font-headline">{editingId ? 'Editar Desafío' : 'Crear Desafío'}</DialogTitle>
+                  <DialogDescription>Configura los detalles técnicos para que la IA pueda evaluar a los alumnos.</DialogDescription>
                 </DialogHeader>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-6">
-                  <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 py-8">
+                  <div className="space-y-5">
                     <div className="grid gap-2">
                       <Label>Título del Desafío</Label>
-                      <Input value={title} onChange={(e) => setTitle(e.target.value)} required placeholder="Ej: Suma de Dos Números" />
+                      <Input value={title} onChange={(e) => setTitle(e.target.value)} required placeholder="Ej: Suma de Dos Números" className="rounded-xl h-11" />
                     </div>
-                    <div className="grid gap-2">
-                      <Label>Dificultad</Label>
-                      <Select value={difficulty} onValueChange={setDifficulty}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Principiante">Principiante</SelectItem>
-                          <SelectItem value="Intermedio">Intermedio</SelectItem>
-                          <SelectItem value="Avanzado">Avanzado</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="flex items-center justify-between p-4 bg-muted/30 rounded-2xl border">
-                      <div className="space-y-0.5">
-                        <Label className="text-base">Reto Gratuito</Label>
-                        <p className="text-xs text-muted-foreground">Visible para todos los alumnos.</p>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="grid gap-2">
+                        <Label>Dificultad</Label>
+                        <Select value={difficulty} onValueChange={setDifficulty}>
+                          <SelectTrigger className="rounded-xl h-11"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Principiante">Principiante</SelectItem>
+                            <SelectItem value="Intermedio">Intermedio</SelectItem>
+                            <SelectItem value="Avanzado">Avanzado</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
-                      <Switch checked={isFree} onCheckedChange={setIsFree} />
+                      <div className="grid gap-2">
+                        <Label>Acceso</Label>
+                        <div className="flex items-center justify-between px-3 h-11 bg-muted/30 rounded-xl border">
+                          <span className="text-xs font-medium">{isFree ? 'Gratis' : 'Premium'}</span>
+                          <Switch checked={isFree} onCheckedChange={setIsFree} />
+                        </div>
+                      </div>
                     </div>
+
                     <div className="grid gap-2">
                       <Label>Tecnología / Lenguaje</Label>
                       <Select value={technology} onValueChange={setTechnology}>
-                        <SelectTrigger><SelectValue placeholder="Selecciona..." /></SelectTrigger>
+                        <SelectTrigger className="rounded-xl h-11"><SelectValue placeholder="Selecciona..." /></SelectTrigger>
                         <SelectContent className="max-h-[300px]">
                           {Object.entries(TECH_STACK).map(([category, subgroups]) => (
                             <SelectGroup key={category}>
@@ -179,26 +184,71 @@ export default function AdminChallengesPage() {
                         </SelectContent>
                       </Select>
                     </div>
+
                     <div className="grid gap-2">
-                      <Label>Descripción del Reto</Label>
-                      <Textarea value={description} onChange={(e) => setDescription(e.target.value)} className="min-h-[150px]" placeholder="Instrucciones detalladas..." />
+                      <Label>Descripción e Instrucciones</Label>
+                      <Textarea 
+                        value={description} 
+                        onChange={(e) => setDescription(e.target.value)} 
+                        className="min-h-[180px] rounded-2xl resize-none" 
+                        placeholder="Escribe aquí el enunciado del problema, los requisitos y qué esperas que el alumno resuelva." 
+                      />
                     </div>
                   </div>
                   
-                  <div className="space-y-4">
+                  <div className="space-y-6">
                     <div className="grid gap-2">
-                      <Label>Código Inicial (Boilerplate)</Label>
-                      <Textarea value={initialCode} onChange={(e) => setInitialCode(e.target.value)} className="font-mono text-xs min-h-[150px]" placeholder="function solution() {\n  \n}" />
+                      <div className="flex items-center justify-between">
+                        <Label className="flex items-center gap-2">
+                          Código Inicial (Plantilla)
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                              </TooltipTrigger>
+                              <TooltipContent className="max-w-[200px]">
+                                <p className="text-xs">Es el código base que verá el alumno al empezar. Úsalo para definir funciones vacías o estructuras iniciales.</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </Label>
+                      </div>
+                      <Textarea 
+                        value={initialCode} 
+                        onChange={(e) => setInitialCode(e.target.value)} 
+                        className="font-mono text-[11px] min-h-[180px] rounded-2xl bg-slate-50" 
+                        placeholder={"function solution() {\n  // El alumno empezará aquí\n}"} 
+                      />
                     </div>
+
                     <div className="grid gap-2">
-                      <Label>Solución Sugerida</Label>
-                      <Textarea value={solution} onChange={(e) => setSolution(e.target.value)} className="font-mono text-xs min-h-[150px] border-emerald-100" placeholder="Código de la solución..." />
+                      <div className="flex items-center justify-between">
+                        <Label className="flex items-center gap-2">
+                          Solución de Referencia
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                              </TooltipTrigger>
+                              <TooltipContent className="max-w-[200px]">
+                                <p className="text-xs">Este código NO lo verá el alumno. Sirve para que la IA sepa qué lógica es la correcta al calificar.</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </Label>
+                      </div>
+                      <Textarea 
+                        value={solution} 
+                        onChange={(e) => setSolution(e.target.value)} 
+                        className="font-mono text-[11px] min-h-[180px] rounded-2xl border-emerald-100 bg-emerald-50/30" 
+                        placeholder="Escribe el código que resuelve el reto correctamente..." 
+                      />
                     </div>
                   </div>
                 </div>
                 <DialogFooter>
-                  <Button type="submit" className="w-full rounded-xl h-12 shadow-lg shadow-primary/20">
-                    {editingId ? 'Actualizar Desafío' : 'Publicar Desafío'}
+                  <Button type="submit" className="w-full rounded-2xl h-14 text-lg font-bold shadow-xl shadow-primary/20 transition-all hover:scale-[1.01] active:scale-[0.99]">
+                    {editingId ? 'Actualizar Desafío' : 'Publicar Desafío en el Catálogo'}
                   </Button>
                 </DialogFooter>
               </form>
@@ -206,7 +256,7 @@ export default function AdminChallengesPage() {
           </Dialog>
         </header>
 
-        <div className="bg-card rounded-2xl border shadow-sm overflow-hidden">
+        <div className="bg-card rounded-[2rem] border shadow-sm overflow-hidden">
           {isLoading ? (
             <div className="p-20 flex flex-col items-center justify-center gap-4">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -215,23 +265,23 @@ export default function AdminChallengesPage() {
           ) : (
             <Table>
               <TableHeader>
-                <TableRow className="bg-muted/30">
-                  <TableHead>Título</TableHead>
+                <TableRow className="bg-muted/30 border-none">
+                  <TableHead className="pl-8 py-5">Título</TableHead>
                   <TableHead>Acceso</TableHead>
                   <TableHead>Tecnología</TableHead>
                   <TableHead>Dificultad</TableHead>
-                  <TableHead className="text-right">Acciones</TableHead>
+                  <TableHead className="text-right pr-8">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {challenges?.map(challenge => (
-                  <TableRow key={challenge.id} className="group">
-                    <TableCell className="font-bold">{challenge.title}</TableCell>
+                  <TableRow key={challenge.id} className="group hover:bg-muted/10 border-muted/20">
+                    <TableCell className="font-bold pl-8">{challenge.title}</TableCell>
                     <TableCell>
                       {challenge.isFree ? (
-                        <Badge variant="outline" className="text-emerald-600 border-emerald-200 bg-emerald-50"><Unlock className="h-3 w-3 mr-1" /> Gratis</Badge>
+                        <Badge variant="outline" className="text-emerald-600 border-emerald-200 bg-emerald-50 rounded-lg"><Unlock className="h-3 w-3 mr-1" /> Gratis</Badge>
                       ) : (
-                        <Badge variant="outline" className="text-amber-600 border-amber-200 bg-amber-50"><Lock className="h-3 w-3 mr-1" /> Premium</Badge>
+                        <Badge variant="outline" className="text-amber-600 border-amber-200 bg-amber-50 rounded-lg"><Lock className="h-3 w-3 mr-1" /> Premium</Badge>
                       )}
                     </TableCell>
                     <TableCell>
@@ -246,13 +296,13 @@ export default function AdminChallengesPage() {
                         {challenge.difficulty}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right pr-8">
                       <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl" onClick={() => handleEditClick(challenge)}>
+                        <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl" onClick={() => handleEditClick(challenge)}>
                           <Edit className="h-4 w-4" />
                         </Button>
                         {isAdmin && (
-                          <Button variant="ghost" size="icon" className="h-9 w-9 text-destructive rounded-xl hover:bg-destructive/10" onClick={() => handleDelete(challenge.id)}>
+                          <Button variant="ghost" size="icon" className="h-10 w-10 text-destructive rounded-xl hover:bg-destructive/10" onClick={() => handleDelete(challenge.id)}>
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         )}
