@@ -1,21 +1,23 @@
+
 'use client';
 
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { Navbar } from '@/components/layout/Navbar';
 import { CourseCertificate } from '@/components/courses/CourseCertificate';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, Download, Printer, Share2, Loader2, AlertCircle } from 'lucide-react';
+import { ChevronLeft, Printer, Share2, Loader2, AlertCircle, Eye } from 'lucide-react';
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
-import { doc, collection, query, where } from 'firebase/firestore';
-import { useEffect, useState } from 'react';
+import { doc, collection } from 'firebase/firestore';
+import { useState } from 'react';
 
 export default function CertificatePage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const courseId = params.id as string;
+  const isPreview = searchParams.get('preview') === 'true';
   const db = useFirestore();
   const { user, isUserLoading } = useUser();
-  const [isPrinting, setIsPrinting] = useState(false);
 
   const courseRef = useMemoFirebase(() => {
     if (!db || !courseId) return null;
@@ -30,9 +32,9 @@ export default function CertificatePage() {
   const { data: profile } = useDoc(profileRef);
 
   const progressRef = useMemoFirebase(() => {
-    if (!db || !user?.uid || !courseId) return null;
+    if (!db || !user?.uid || !courseId || isPreview) return null;
     return doc(db, 'users', user.uid, 'courseProgress', courseId);
-  }, [db, user?.uid, courseId]);
+  }, [db, user?.uid, courseId, isPreview]);
   const { data: progress } = useDoc(progressRef);
 
   const modulesQuery = useMemoFirebase(() => {
@@ -53,7 +55,8 @@ export default function CertificatePage() {
     );
   }
 
-  if (!course || !progress || progress.status !== 'completed') {
+  // Si no es preview, validar que el curso esté completado
+  if (!isPreview && (!course || !progress || progress.status !== 'completed')) {
     return (
       <div className="h-screen flex flex-col items-center justify-center gap-4 text-center p-6">
         <AlertCircle className="h-12 w-12 text-amber-500" />
@@ -64,8 +67,14 @@ export default function CertificatePage() {
     );
   }
 
-  const studentName = profile?.displayName || user?.displayName || user?.email?.split('@')[0] || 'Estudiante';
-  const completionDate = progress?.completedAt ? new Date(progress.completedAt.toDate()).toLocaleDateString() : new Date().toLocaleDateString();
+  // Si es preview y no hay curso cargado todavía
+  if (isPreview && !course) {
+    return <div className="p-20 text-center">Curso no encontrado para vista previa.</div>;
+  }
+
+  const studentName = isPreview ? "Nombre del Estudiante" : (profile?.displayName || user?.displayName || user?.email?.split('@')[0] || 'Estudiante');
+  const completionDate = isPreview ? new Date().toLocaleDateString() : (progress?.completedAt ? new Date(progress.completedAt.toDate()).toLocaleDateString() : new Date().toLocaleDateString());
+  const isPremium = isPreview ? true : !!profile?.isPremiumSubscriber;
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col print:bg-white">
@@ -78,8 +87,16 @@ export default function CertificatePage() {
           <header className="w-full flex items-center justify-between print:hidden">
             <Button variant="ghost" onClick={() => router.back()} className="rounded-xl gap-2">
               <ChevronLeft className="h-4 w-4" />
-              Volver al Curso
+              {isPreview ? 'Volver al Admin' : 'Volver al Curso'}
             </Button>
+            
+            {isPreview && (
+              <div className="flex items-center gap-2 bg-amber-50 text-amber-700 px-4 py-2 rounded-2xl border border-amber-200 text-xs font-bold">
+                <Eye className="h-4 w-4" />
+                Modo Vista Previa
+              </div>
+            )}
+
             <div className="flex items-center gap-3">
               <Button variant="outline" className="rounded-xl gap-2" onClick={handlePrint}>
                 <Printer className="h-4 w-4" />
@@ -96,9 +113,9 @@ export default function CertificatePage() {
             <div className="min-w-[900px]">
               <CourseCertificate 
                 studentName={studentName}
-                courseTitle={course.title}
-                technology={course.technology || 'General'}
-                isPremium={!!profile?.isPremiumSubscriber}
+                courseTitle={course?.title || 'Título del Curso'}
+                technology={course?.technology || 'General'}
+                isPremium={isPremium}
                 completionDate={completionDate}
                 modulesCount={modules?.length || 0}
               />
@@ -106,9 +123,14 @@ export default function CertificatePage() {
           </div>
 
           <section className="max-w-2xl text-center space-y-4 print:hidden">
-            <h2 className="text-2xl font-headline font-bold">¡Felicidades por tu graduación!</h2>
+            <h2 className="text-2xl font-headline font-bold">
+              {isPreview ? 'Así verán los alumnos su certificado' : '¡Felicidades por tu graduación!'}
+            </h2>
             <p className="text-muted-foreground">
-              Has demostrado compromiso y disciplina al finalizar este programa. Este certificado es un testimonio de tus nuevas habilidades técnicas en <strong>{course.technology}</strong>.
+              {isPreview 
+                ? "Esta es una representación del diploma oficial que se otorga al finalizar el curso." 
+                : `Has demostrado compromiso y disciplina al finalizar este programa en ${course?.technology}.`
+              }
             </p>
           </section>
         </div>

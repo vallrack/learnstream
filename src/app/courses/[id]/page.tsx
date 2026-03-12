@@ -6,12 +6,12 @@ import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { PlayCircle, Users, Star, Clock, Globe, BookOpen, CheckCircle2, Loader2, Zap, ChevronRight, Play, Award, AlertTriangle, Lock } from 'lucide-react';
+import { PlayCircle, Users, Star, Clock, Globe, BookOpen, CheckCircle2, Loader2, Zap, ChevronRight, Play, Award, Lock, ShieldAlert } from 'lucide-react';
 import Link from 'next/link';
 import { useDoc, useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
-import { doc, collection, query, orderBy, limit, Timestamp } from 'firebase/firestore';
+import { doc, collection, query, orderBy, Timestamp } from 'firebase/firestore';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
 export default function CourseDetailPage() {
   const params = useParams();
@@ -34,12 +34,6 @@ export default function CourseDetailPage() {
   }, [db, user?.uid]);
   const { data: profile } = useDoc(profileRef);
 
-  const modulesQuery = useMemoFirebase(() => {
-    if (!db || !id) return null;
-    return query(collection(db, 'courses', id, 'modules'), orderBy('orderIndex', 'asc'));
-  }, [db, id]);
-  const { data: modules } = useCollection(modulesQuery);
-
   const progressRef = useMemoFirebase(() => {
     if (!db || !user?.uid || !id) return null;
     return doc(db, 'users', user.uid, 'courseProgress', id);
@@ -52,6 +46,29 @@ export default function CourseDetailPage() {
         <Navbar />
         <main className="flex-1 flex items-center justify-center">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </main>
+      </div>
+    );
+  }
+
+  // Verificación de cuenta inactiva
+  const isAccountInactive = profile?.isActive === false;
+
+  if (isAccountInactive) {
+    return (
+      <div className="min-h-screen bg-[#F8FAFC] flex flex-col">
+        <Navbar />
+        <main className="flex-1 flex flex-col items-center justify-center p-6 text-center">
+          <div className="w-24 h-24 bg-rose-100 rounded-[2.5rem] flex items-center justify-center mb-8 shadow-xl shadow-rose-500/10">
+            <ShieldAlert className="h-10 w-10 text-rose-600" />
+          </div>
+          <h1 className="text-4xl font-headline font-bold mb-4">Acceso Denegado</h1>
+          <p className="text-muted-foreground max-w-md mb-8 text-lg">
+            Tu cuenta ha sido suspendida por el administrador. Ponte en contacto con soporte si crees que esto es un error.
+          </p>
+          <Button variant="outline" onClick={() => router.push('/')} className="rounded-2xl h-14 px-10 text-lg font-bold">
+            Volver al Inicio
+          </Button>
         </main>
       </div>
     );
@@ -76,7 +93,6 @@ export default function CourseDetailPage() {
   const imageSrc = course.thumbnailDataUrl || course.imageUrl || 'https://picsum.photos/seed/course/800/450';
   const previewVideoUrl = course.previewVideoUrl || null;
 
-  // Lógica de expiración
   const closingDate = course.closingDate instanceof Timestamp ? course.closingDate.toDate() : (course.closingDate ? new Date(course.closingDate) : null);
   const isExpired = closingDate && closingDate < new Date();
   const accessDenied = isExpired && !isPremium;
@@ -97,7 +113,6 @@ export default function CourseDetailPage() {
     <div className="min-h-screen bg-background pb-20">
       <Navbar />
       
-      {/* Hero Section */}
       <div className="bg-slate-900 pt-16 pb-32 md:pb-40 px-6 relative overflow-hidden">
         <div className="absolute inset-0 bg-primary/10" />
         <div className="max-w-7xl mx-auto relative z-10 text-white">
@@ -127,13 +142,9 @@ export default function CourseDetailPage() {
             {closingDate && (
               <div className="flex items-center gap-2">
                 <Clock className="h-4 w-4" /> 
-                Fecha de cierre: <span className={`${isExpired ? 'text-rose-400' : 'text-white'} font-medium`}>{closingDate.toLocaleDateString()}</span>
+                Cierre: <span className={`${isExpired ? 'text-rose-400' : 'text-white'} font-medium`}>{closingDate.toLocaleDateString()}</span>
               </div>
             )}
-            <div className="flex items-center gap-2">
-              <Globe className="h-4 w-4" /> 
-              <span className="text-white font-medium">Español</span>
-            </div>
           </div>
         </div>
       </div>
@@ -147,12 +158,11 @@ export default function CourseDetailPage() {
                   <Lock className="h-10 w-10 text-rose-600" />
                 </div>
                 <div className="flex-1 text-center md:text-left space-y-2">
-                  <h2 className="text-2xl font-headline font-bold text-rose-900">Curso Inactivo para Estándar</h2>
-                  <p className="text-rose-700">Este programa ha finalizado su periodo lectivo. Solo los alumnos **Premium** mantienen el acceso de por vida a los contenidos.</p>
+                  <h2 className="text-2xl font-headline font-bold text-rose-900">Curso Finalizado</h2>
+                  <p className="text-rose-700">Este programa ha cerrado. Solo los alumnos **Premium** mantienen el acceso vitalicio.</p>
                 </div>
-                <Button className="rounded-2xl h-14 px-8 bg-amber-500 hover:bg-amber-600 font-bold shadow-lg shadow-amber-200 gap-2">
-                  <Crown className="h-5 w-5" />
-                  Obtener Premium
+                <Button className="rounded-2xl h-14 px-8 bg-amber-500 hover:bg-amber-600 font-bold shadow-lg shadow-amber-200">
+                  Mejorar a Premium
                 </Button>
               </section>
             )}
@@ -163,8 +173,8 @@ export default function CourseDetailPage() {
                   <Award className="h-10 w-10 text-emerald-600" />
                 </div>
                 <div className="flex-1 text-center md:text-left space-y-2">
-                  <h2 className="text-2xl font-headline font-bold text-emerald-900">¡Felicidades, completaste este curso!</h2>
-                  <p className="text-emerald-700">Has demostrado tu compromiso. Ya puedes descargar tu certificado oficial.</p>
+                  <h2 className="text-2xl font-headline font-bold text-emerald-900">¡Curso Completado!</h2>
+                  <p className="text-emerald-700">Ya puedes descargar tu certificado con tu nombre actualizado en el perfil.</p>
                 </div>
                 <Link href={`/courses/${id}/certificate`}>
                   <Button className="rounded-2xl h-14 px-8 bg-emerald-600 hover:bg-emerald-700 font-bold shadow-lg shadow-emerald-200 gap-2">
@@ -177,7 +187,7 @@ export default function CourseDetailPage() {
 
             {!accessDenied && (
               <>
-                <section className="bg-card p-8 rounded-[2rem] border shadow-sm">
+                <section className="bg-card p-8 rounded-[2rem] border shadow-sm bg-white">
                   <h2 className="text-2xl font-headline font-bold mb-6 text-foreground">Lo que aprenderás</h2>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {[
@@ -203,7 +213,7 @@ export default function CourseDetailPage() {
           </div>
 
           <div className="space-y-6">
-            <div className="bg-card rounded-[2rem] border shadow-2xl overflow-hidden sticky top-24">
+            <div className="bg-card rounded-[2rem] border shadow-2xl overflow-hidden sticky top-24 bg-white">
               <div className="relative aspect-video bg-black group">
                 {showPreview && previewVideoUrl ? (
                   <iframe 
@@ -234,24 +244,13 @@ export default function CourseDetailPage() {
                       >
                         <Play className="h-8 w-8 fill-current" />
                       </Button>
-                      <span className="text-white font-bold mt-4 drop-shadow-md">
-                        {previewVideoUrl ? 'Vista previa del curso' : 'Imagen del curso'}
-                      </span>
                     </div>
                   </>
                 )}
               </div>
               <div className="p-8">
-                <div className="text-3xl font-headline font-bold mb-6 text-foreground">
-                  {course.price > 0 ? `$${course.price}` : 'Gratis'}
-                </div>
-                
                 <div className="space-y-4">
-                  {accessDenied ? (
-                    <Button disabled className="w-full h-12 text-lg font-bold rounded-xl opacity-50 grayscale">
-                      <Lock className="h-5 w-5 mr-2" /> Curso Finalizado
-                    </Button>
-                  ) : isCompleted ? (
+                  {isCompleted ? (
                     <Link href={`/courses/${id}/certificate`} className="w-full">
                       <Button className="w-full h-12 text-lg font-bold bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-lg shadow-emerald-200 gap-2">
                         <Award className="h-5 w-5" />
@@ -274,9 +273,8 @@ export default function CourseDetailPage() {
                 <div className="mt-8 space-y-4">
                   <p className="font-semibold text-sm text-foreground">Este curso incluye:</p>
                   <ul className="space-y-3 text-sm text-muted-foreground">
-                    <li className="flex items-center gap-3"><Clock className="h-4 w-4" /> {isPremium ? 'Acceso de por vida (Premium)' : (isExpired ? 'Acceso expirado' : 'Acceso temporal hasta cierre')}</li>
+                    <li className="flex items-center gap-3"><Clock className="h-4 w-4" /> Acceso vitalicio para Premium</li>
                     <li className="flex items-center gap-3"><BookOpen className="h-4 w-4" /> Material descargable</li>
-                    <li className="flex items-center gap-3"><Zap className="h-4 w-4 text-primary" /> Asistente de IA 24/7</li>
                     <li className="flex items-center gap-3"><Award className="h-4 w-4 text-emerald-500" /> Certificado de finalización</li>
                   </ul>
                 </div>
@@ -291,7 +289,6 @@ export default function CourseDetailPage() {
 
 function CourseCurriculum({ courseId }: { courseId: string }) {
   const db = useFirestore();
-
   const modulesQuery = useMemoFirebase(() => {
     if (!db) return null;
     return query(collection(db, 'courses', courseId, 'modules'), orderBy('orderIndex', 'asc'));
@@ -301,26 +298,14 @@ function CourseCurriculum({ courseId }: { courseId: string }) {
 
   if (isLoading) return <div className="flex justify-center p-12"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
 
-  if (!modules || modules.length === 0) {
-    return (
-      <div className="p-12 text-center bg-muted/10 rounded-3xl border-2 border-dashed">
-        <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-        <p className="text-muted-foreground font-medium">Contenido en preparación.</p>
-        <p className="text-sm text-muted-foreground mt-2">Próximamente podrás ver los módulos y lecciones aquí.</p>
-      </div>
-    );
-  }
-
   return (
     <div id="curriculum">
       <Accordion type="single" collapsible className="w-full space-y-4">
-        {modules.map((module, index) => (
-          <AccordionItem key={module.id} value={module.id} className="bg-card border rounded-2xl overflow-hidden px-4 shadow-sm border-border/50">
+        {modules?.map((module, index) => (
+          <AccordionItem key={module.id} value={module.id} className="bg-white border rounded-2xl overflow-hidden px-4 shadow-sm">
             <AccordionTrigger className="hover:no-underline py-6">
               <div className="flex flex-col items-start text-left gap-1">
-                <span className="text-xs font-bold text-primary uppercase tracking-wider">
-                  Módulo {index + 1}
-                </span>
+                <span className="text-xs font-bold text-primary uppercase tracking-wider">Módulo {index + 1}</span>
                 <span className="text-lg font-bold text-foreground">{module.title}</span>
               </div>
             </AccordionTrigger>
@@ -336,7 +321,6 @@ function CourseCurriculum({ courseId }: { courseId: string }) {
 
 function ModuleLessons({ courseId, moduleId }: { courseId: string, moduleId: string }) {
   const db = useFirestore();
-
   const lessonsQuery = useMemoFirebase(() => {
     if (!db) return null;
     return query(collection(db, 'courses', courseId, 'modules', moduleId, 'lessons'), orderBy('orderIndex', 'asc'));
@@ -346,49 +330,31 @@ function ModuleLessons({ courseId, moduleId }: { courseId: string, moduleId: str
 
   if (isLoading) return <div className="py-4 flex justify-center"><Loader2 className="h-4 w-4 animate-spin text-primary" /></div>;
 
-  const isUrl = (str: string) => {
-    if (!str) return false;
-    try {
-      new URL(str);
-      return true;
-    } catch {
-      return false;
-    }
-  };
-
   return (
     <div className="space-y-2">
       {lessons?.map((lesson) => (
-        <div key={lesson.id} className="flex items-center justify-between p-4 rounded-xl hover:bg-muted/30 transition-colors group border border-transparent hover:border-border/50">
+        <div key={lesson.id} className="flex items-center justify-between p-4 rounded-xl hover:bg-muted/30 transition-colors group border border-transparent">
           <div className="flex items-center gap-4">
             <div className="bg-muted p-2.5 rounded-xl group-hover:bg-primary/10 transition-colors">
               <PlayCircle className="h-5 w-5 text-muted-foreground group-hover:text-primary" />
             </div>
             <div>
               <p className="text-sm font-semibold group-hover:text-primary transition-colors text-foreground">
-                {isUrl(lesson.title) ? "Video Clase" : lesson.title}
+                {lesson.title}
               </p>
               <div className="flex items-center gap-3 mt-1">
-                <span className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Clock className="h-3 w-3" /> {lesson.durationInMinutes || 10} min
-                </span>
-                {lesson.isPremium && (
-                  <Badge variant="outline" className="text-[10px] h-4 py-0 px-1 text-amber-600 border-amber-200 bg-amber-50">Premium</Badge>
-                )}
+                <span className="text-xs text-muted-foreground flex items-center gap-1"><Clock className="h-3 w-3" /> {lesson.durationInMinutes || 10} min</span>
+                {lesson.isPremium && <Badge variant="outline" className="text-[10px] h-4 py-0 bg-amber-50 text-amber-600">Premium</Badge>}
               </div>
             </div>
           </div>
-          <Button variant="ghost" size="sm" className="rounded-lg h-9 gap-1 font-bold group-hover:bg-primary group-hover:text-white transition-all" asChild>
+          <Button variant="ghost" size="sm" className="rounded-lg h-9 gap-1 font-bold" asChild>
              <Link href={`/courses/${courseId}/learn/${lesson.id}?moduleId=${moduleId}`}>
-               Ver Clase
-               <ChevronRight className="h-4 w-4" />
+               Ver Clase <ChevronRight className="h-4 w-4" />
              </Link>
           </Button>
         </div>
       ))}
-      {(!lessons || lessons.length === 0) && (
-        <p className="text-xs text-muted-foreground italic px-4">Este módulo no tiene lecciones aún.</p>
-      )}
     </div>
   );
 }

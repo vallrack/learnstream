@@ -15,35 +15,33 @@ import {
   UserCircle,
   Crown,
   Trophy,
-  Filter,
-  ArrowLeft
+  ArrowLeft,
+  UserCheck,
+  UserX,
+  ShieldAlert
 } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { useCollection, useFirestore, useUser, useMemoFirebase } from '@/firebase';
+import { useCollection, useFirestore, useUser, useMemoFirebase, useDoc, updateDocumentNonBlocking } from '@/firebase';
 import { collection, query, orderBy, doc } from 'firebase/firestore';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 
 export default function AdminStudentsPage() {
-  const router = useRouter();
   const db = useFirestore();
-  const { user: currentUser } = useUser();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
 
-  // 1. Obtener todos los usuarios
   const usersQuery = useMemoFirebase(() => {
     if (!db) return null;
     return query(collection(db, 'users'), orderBy('createdAt', 'desc'));
   }, [db]);
   const { data: students, isLoading } = useCollection(usersQuery);
 
-  // 2. Obtener todos los cursos para referencia
   const coursesQuery = useMemoFirebase(() => {
     if (!db) return null;
     return collection(db, 'courses');
@@ -76,7 +74,7 @@ export default function AdminStudentsPage() {
                   </div>
                   <h1 className="text-4xl font-headline font-bold">Gestión de Alumnos</h1>
                 </div>
-                <p className="text-muted-foreground">Monitorea el progreso y las inscripciones de tus estudiantes.</p>
+                <p className="text-muted-foreground">Monitorea el progreso y activa/desactiva cuentas de estudiantes.</p>
               </div>
               
               <div className="relative w-full md:w-80">
@@ -101,15 +99,15 @@ export default function AdminStudentsPage() {
                   <TableHeader>
                     <TableRow className="bg-slate-50 border-none hover:bg-slate-50">
                       <TableHead className="pl-8 h-14">Estudiante</TableHead>
+                      <TableHead>Estado</TableHead>
                       <TableHead>Nivel</TableHead>
-                      <TableHead>Registrado el</TableHead>
-                      <TableHead>Rol</TableHead>
+                      <TableHead>Registrado</TableHead>
                       <TableHead className="text-right pr-8">Acciones</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredStudents.map((student) => (
-                      <TableRow key={student.id} className="border-slate-100 group">
+                      <TableRow key={student.id} className={`border-slate-100 group ${student.isActive === false ? 'opacity-60 grayscale' : ''}`}>
                         <TableCell className="pl-8 py-4">
                           <div className="flex items-center gap-3">
                             <Avatar className="h-10 w-10 border-2 border-slate-100">
@@ -123,6 +121,17 @@ export default function AdminStudentsPage() {
                           </div>
                         </TableCell>
                         <TableCell>
+                          {student.isActive === false ? (
+                            <Badge variant="destructive" className="rounded-lg gap-1">
+                              <UserX className="h-3 w-3" /> Inactivo
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-emerald-600 border-emerald-200 bg-emerald-50 rounded-lg gap-1">
+                              <UserCheck className="h-3 w-3" /> Activo
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>
                           {student.isPremiumSubscriber ? (
                             <Badge className="bg-amber-100 text-amber-700 border-amber-200 hover:bg-amber-100 gap-1 rounded-lg">
                               <Crown className="h-3 w-3" /> Premium
@@ -132,10 +141,7 @@ export default function AdminStudentsPage() {
                           )}
                         </TableCell>
                         <TableCell className="text-slate-500 text-sm">
-                          {student.createdAt ? new Date(student.createdAt.toDate()).toLocaleDateString() : 'Desconocido'}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="secondary" className="rounded-lg capitalize">{student.role || 'Estudiante'}</Badge>
+                          {student.createdAt ? new Date(student.createdAt.toDate()).toLocaleDateString() : 'N/A'}
                         </TableCell>
                         <TableCell className="text-right pr-8">
                           <Button 
@@ -144,19 +150,12 @@ export default function AdminStudentsPage() {
                             className="rounded-xl gap-2 h-10 group-hover:bg-primary group-hover:text-white transition-all"
                             onClick={() => setSelectedStudentId(student.id)}
                           >
-                            Ver Progreso
+                            Gestionar
                             <ChevronRight className="h-4 w-4" />
                           </Button>
                         </TableCell>
                       </TableRow>
                     ))}
-                    {filteredStudents.length === 0 && (
-                      <TableRow>
-                        <TableCell colSpan={5} className="py-20 text-center text-muted-foreground">
-                          No se encontraron estudiantes que coincidan con la búsqueda.
-                        </TableCell>
-                      </TableRow>
-                    )}
                   </TableBody>
                 </Table>
               )}
@@ -171,26 +170,30 @@ export default function AdminStudentsPage() {
 function StudentDetailView({ studentId, allCourses, onBack }: { studentId: string, allCourses: any[], onBack: () => void }) {
   const db = useFirestore();
   
-  // 1. Perfil del estudiante
   const studentRef = useMemoFirebase(() => {
     if (!db || !studentId) return null;
     return doc(db, 'users', studentId);
   }, [db, studentId]);
   const { data: student } = useDoc(studentRef);
 
-  // 2. Progreso en cursos (Inscripciones)
   const progressQuery = useMemoFirebase(() => {
     if (!db || !studentId) return null;
     return collection(db, 'users', studentId, 'courseProgress');
   }, [db, studentId]);
   const { data: enrollments, isLoading: isProgressLoading } = useCollection(progressQuery);
 
-  // 3. Desafíos realizados
   const submissionsQuery = useMemoFirebase(() => {
     if (!db || !studentId) return null;
     return collection(db, 'users', studentId, 'challenge_submissions');
   }, [db, studentId]);
   const { data: submissions } = useCollection(submissionsQuery);
+
+  const handleToggleStatus = (active: boolean) => {
+    if (!db || !studentId) return;
+    updateDocumentNonBlocking(doc(db, 'users', studentId), {
+      isActive: active
+    });
+  };
 
   const enrichedEnrollments = enrollments?.map(enr => {
     const course = allCourses.find(c => c.id === enr.courseId);
@@ -205,30 +208,54 @@ function StudentDetailView({ studentId, allCourses, onBack }: { studentId: strin
           Volver a Estudiantes
         </Button>
         
-        <div className="flex items-center gap-6">
-          <Avatar className="h-24 w-24 border-4 border-white shadow-xl">
-            <AvatarImage src={student?.profileImageUrl} />
-            <AvatarFallback className="bg-primary/10 text-primary text-3xl font-bold">
-              {student?.displayName?.[0] || 'E'}
-            </AvatarFallback>
-          </Avatar>
-          <div className="space-y-1">
-            <h2 className="text-4xl font-headline font-bold text-slate-900">{student?.displayName || 'Estudiante'}</h2>
-            <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-              <span className="flex items-center gap-1.5"><Mail className="h-4 w-4" /> {student?.email || 'Modo Invitado'}</span>
-              <span className="flex items-center gap-1.5"><Calendar className="h-4 w-4" /> Registrado: {student?.createdAt ? new Date(student.createdAt.toDate()).toLocaleDateString() : 'N/A'}</span>
-              {student?.isPremiumSubscriber && (
-                <Badge className="bg-amber-100 text-amber-700 border-amber-200">
-                  <Crown className="h-3 w-3 mr-1" /> Miembro Premium
-                </Badge>
-              )}
+        <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="flex items-center gap-6">
+            <Avatar className="h-24 w-24 border-4 border-white shadow-xl">
+              <AvatarImage src={student?.profileImageUrl} />
+              <AvatarFallback className="bg-primary/10 text-primary text-3xl font-bold">
+                {student?.displayName?.[0] || 'E'}
+              </AvatarFallback>
+            </Avatar>
+            <div className="space-y-1">
+              <h2 className="text-4xl font-headline font-bold text-slate-900">{student?.displayName || 'Estudiante'}</h2>
+              <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+                <span className="flex items-center gap-1.5"><Mail className="h-4 w-4" /> {student?.email}</span>
+                {student?.isPremiumSubscriber && (
+                  <Badge className="bg-amber-100 text-amber-700 border-amber-200">
+                    <Crown className="h-3 w-3 mr-1" /> Premium
+                  </Badge>
+                )}
+              </div>
             </div>
           </div>
+
+          <Card className="rounded-2xl border-slate-200 bg-white p-4 flex items-center gap-4">
+            <div className="flex flex-col">
+              <Label className="text-xs font-bold uppercase text-muted-foreground mb-1">Estado de la Cuenta</Label>
+              <span className={`text-sm font-bold ${student?.isActive !== false ? 'text-emerald-600' : 'text-rose-600'}`}>
+                {student?.isActive !== false ? 'Cuenta Activa' : 'Cuenta Suspendida'}
+              </span>
+            </div>
+            <Switch 
+              checked={student?.isActive !== false} 
+              onCheckedChange={handleToggleStatus}
+              className="data-[state=checked]:bg-emerald-500"
+            />
+          </Card>
         </div>
       </header>
 
+      {student?.isActive === false && (
+        <div className="p-6 bg-rose-50 border border-rose-200 rounded-[2rem] flex items-center gap-4 text-rose-700">
+          <ShieldAlert className="h-8 w-8 shrink-0" />
+          <div>
+            <p className="font-bold text-lg">Cuenta Inactiva</p>
+            <p className="text-sm opacity-80">El acceso a los cursos para este estudiante ha sido revocado. El alumno verá un mensaje de suspensión al intentar ingresar.</p>
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Estadísticas Rápidas */}
         <div className="lg:col-span-1 space-y-6">
           <Card className="rounded-[2rem] border-none shadow-sm bg-white overflow-hidden">
             <CardHeader className="bg-slate-50 border-b">
@@ -245,27 +272,19 @@ function StudentDetailView({ studentId, allCourses, onBack }: { studentId: strin
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="bg-emerald-100 p-2 rounded-xl"><Trophy className="h-5 w-5 text-emerald-600" /></div>
-                  <span className="text-sm font-medium text-slate-600">Cursos Finalizados</span>
+                  <span className="text-sm font-medium text-slate-600">Certificados</span>
                 </div>
                 <span className="text-xl font-bold">{enrichedEnrollments.filter(e => e.status === 'completed').length}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="bg-purple-100 p-2 rounded-xl"><Trophy className="h-5 w-5 text-purple-600" /></div>
-                  <span className="text-sm font-medium text-slate-600">Desafíos Completados</span>
-                </div>
-                <span className="text-xl font-bold">{submissions?.length || 0}</span>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Listado de Inscripciones */}
         <div className="lg:col-span-2 space-y-8">
           <section>
             <h3 className="text-xl font-headline font-bold mb-6 flex items-center gap-2">
               <BookOpen className="h-5 w-5 text-primary" />
-              Inscripciones por Curso
+              Inscripciones Actuales
             </h3>
             
             <div className="space-y-4">
@@ -273,7 +292,7 @@ function StudentDetailView({ studentId, allCourses, onBack }: { studentId: strin
                 <div className="p-12 flex justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
               ) : enrichedEnrollments.length > 0 ? (
                 enrichedEnrollments.map((enr) => (
-                  <Card key={enr.id} className="rounded-2xl border border-slate-100 shadow-sm bg-white hover:border-primary/20 transition-all overflow-hidden">
+                  <Card key={enr.id} className="rounded-2xl border border-slate-100 shadow-sm bg-white overflow-hidden">
                     <CardContent className="p-6">
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                         <div className="space-y-1">
@@ -300,58 +319,9 @@ function StudentDetailView({ studentId, allCourses, onBack }: { studentId: strin
                 ))
               ) : (
                 <div className="p-12 text-center bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200">
-                  <p className="text-slate-500 italic text-sm">Este estudiante aún no se ha inscrito en ningún curso.</p>
+                  <p className="text-slate-500 italic text-sm">Sin inscripciones activas.</p>
                 </div>
               )}
-            </div>
-          </section>
-
-          {/* Desafíos */}
-          <section>
-             <h3 className="text-xl font-headline font-bold mb-6 flex items-center gap-2">
-              <Trophy className="h-5 w-5 text-amber-500" />
-              Resultados en Desafíos
-            </h3>
-            <div className="bg-white border rounded-2xl overflow-hidden shadow-sm">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-slate-50/50">
-                    <TableHead>Desafío</TableHead>
-                    <TableHead>Puntaje</TableHead>
-                    <TableHead>Fecha</TableHead>
-                    <TableHead className="text-right">Estado</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {submissions?.map((sub) => (
-                    <TableRow key={sub.id}>
-                      <TableCell className="font-bold text-sm">{sub.challengeTitle}</TableCell>
-                      <TableCell>
-                         <div className="flex items-center gap-2">
-                           <span className={`font-bold ${sub.score >= 4 ? 'text-emerald-600' : 'text-slate-900'}`}>{sub.score}/5</span>
-                         </div>
-                      </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">
-                        {sub.submittedAt ? new Date(sub.submittedAt.toDate()).toLocaleDateString() : 'N/A'}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {sub.passed ? (
-                          <Badge className="bg-emerald-500 text-white border-none rounded-lg text-[10px] h-5">Aprobado</Badge>
-                        ) : (
-                          <Badge className="bg-rose-500 text-white border-none rounded-lg text-[10px] h-5">Fallido</Badge>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {(!submissions || submissions.length === 0) && (
-                    <TableRow>
-                      <TableCell colSpan={4} className="py-8 text-center text-muted-foreground italic text-xs">
-                        Sin intentos registrados.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
             </div>
           </section>
         </div>

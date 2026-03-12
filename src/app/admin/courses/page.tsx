@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import { Navbar } from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
-import { Plus, Edit, Trash2, BookOpen, Loader2, Calendar as CalendarIcon, Clock } from 'lucide-react';
+import { Plus, Edit, Trash2, BookOpen, Loader2, Calendar as CalendarIcon, Clock, Users, Award, Eye } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { useCollection, useFirestore, useUser, useDoc, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
@@ -16,6 +16,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { TECH_STACK } from '@/lib/languages';
 import Link from 'next/link';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 export default function AdminCoursesPage() {
   const { user } = useUser();
@@ -128,27 +129,27 @@ export default function AdminCoursesPage() {
 
   const handleDeleteCourse = (courseId: string) => {
     if (!db || !isAdmin) return;
-    if (confirm('¿Estás seguro de que quieres eliminar este curso permanentemente?')) {
+    if (confirm('¿Eliminar curso permanentemente?')) {
       deleteDocumentNonBlocking(doc(db, 'courses', courseId));
     }
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-[#F8FAFC]">
       <Navbar />
       
       <main className="max-w-7xl mx-auto px-6 py-12">
         <header className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-12">
           <div>
-            <h1 className="text-4xl font-headline font-bold mb-2 text-foreground">Gestionar Cursos</h1>
-            <p className="text-muted-foreground">Crea, organiza y establece fechas de cierre para tus cursos.</p>
+            <h1 className="text-4xl font-headline font-bold mb-2">Gestionar Cursos</h1>
+            <p className="text-muted-foreground">Configura acceso, vigencia y certificaciones académicas.</p>
           </div>
           
           <div className="flex gap-3">
             <Link href="/admin/students">
-              <Button variant="outline" className="rounded-xl h-11 gap-2">
+              <Button variant="outline" className="rounded-xl h-11 gap-2 shadow-sm">
                 <Users className="h-4 w-4" />
-                Gestión de Alumnos
+                Alumnos
               </Button>
             </Link>
             <Dialog open={isDialogOpen} onOpenChange={(open) => {
@@ -156,9 +157,9 @@ export default function AdminCoursesPage() {
               if (!open) resetForm();
             }}>
               <DialogTrigger asChild>
-                <Button onClick={() => resetForm()} className="bg-primary hover:bg-primary/90 gap-2 rounded-xl h-11">
+                <Button onClick={() => resetForm()} className="gap-2 rounded-xl h-11 shadow-lg shadow-primary/10">
                   <Plus className="h-4 w-4" />
-                  Crear Nuevo Curso
+                  Crear Curso
                 </Button>
               </DialogTrigger>
               <DialogContent className="sm:max-w-[650px] rounded-3xl max-h-[90vh] overflow-y-auto">
@@ -166,35 +167,33 @@ export default function AdminCoursesPage() {
                   <DialogHeader>
                     <DialogTitle>{editingCourseId ? 'Editar Curso' : 'Nuevo Curso'}</DialogTitle>
                     <DialogDescription>
-                      Configura el acceso y la vigencia del curso académico.
+                      Define el contenido y la vigencia del programa.
                     </DialogDescription>
                   </DialogHeader>
                   <div className="grid gap-6 py-6">
                     <div className="grid grid-cols-2 gap-4">
                       <div className="grid gap-2">
-                        <Label htmlFor="title">Título del Curso</Label>
-                        <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ej: Next.js Pro" required className="rounded-xl h-11" />
+                        <Label>Título</Label>
+                        <Input value={title} onChange={(e) => setTitle(e.target.value)} required className="rounded-xl h-11" />
                       </div>
                       <div className="grid gap-2">
-                        <Label htmlFor="category">Área Principal</Label>
-                        <Input id="category" value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Ej: Desarrollo Web" required className="rounded-xl h-11" />
+                        <Label>Categoría</Label>
+                        <Input value={category} onChange={(e) => setCategory(e.target.value)} required className="rounded-xl h-11" />
                       </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
                       <div className="grid gap-2">
-                        <Label>Tecnología Específica</Label>
+                        <Label>Tecnología</Label>
                         <Select value={technology} onValueChange={setTechnology}>
-                          <SelectTrigger className="rounded-xl h-11">
-                            <SelectValue placeholder="Selecciona el lenguaje..." />
-                          </SelectTrigger>
+                          <SelectTrigger className="rounded-xl h-11"><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
                           <SelectContent className="max-h-[300px]">
                             {Object.entries(TECH_STACK).map(([cat, subgroups]) => (
                               <SelectGroup key={cat}>
                                 <SelectLabel className="bg-muted/50 py-1.5">{cat}</SelectLabel>
                                 {Array.isArray(subgroups) 
                                   ? subgroups.map(tech => <SelectItem key={tech} value={tech}>{tech}</SelectItem>)
-                                  : Object.entries(subgroups).flatMap(([sub, techs]) => 
+                                  : Object.entries(subgroups).map(([sub, techs]) => 
                                       techs.map(tech => <SelectItem key={tech} value={tech}>{tech}</SelectItem>)
                                     )
                                 }
@@ -204,63 +203,33 @@ export default function AdminCoursesPage() {
                         </Select>
                       </div>
                       <div className="grid gap-2">
-                        <Label htmlFor="closingDate">Fecha de Cierre (Opcional)</Label>
+                        <Label>Fecha de Cierre (Inactivación)</Label>
                         <div className="relative">
                           <CalendarIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                          <Input 
-                            id="closingDate" 
-                            type="date" 
-                            value={closingDate} 
-                            onChange={(e) => setClosingDate(e.target.value)} 
-                            className="rounded-xl h-11 pl-10" 
-                          />
+                          <Input type="date" value={closingDate} onChange={(e) => setClosingDate(e.target.value)} className="rounded-xl h-11 pl-10" />
                         </div>
-                        <p className="text-[10px] text-muted-foreground ml-1">Pasada esta fecha, el curso se inactivará para no-pagos.</p>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                       <div className="grid gap-2">
-                        <Label htmlFor="imageUrl">URL Imagen Portada</Label>
-                        <Input id="imageUrl" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="https://..." className="rounded-xl h-11" />
-                      </div>
-                      <div className="grid gap-2">
-                        <Label htmlFor="previewVideoUrl">URL Video Presentación</Label>
-                        <Input id="previewVideoUrl" value={previewVideoUrl} onChange={(e) => setPreviewVideoUrl(e.target.value)} placeholder="https://youtube.com/..." className="rounded-xl h-11" />
                       </div>
                     </div>
 
                     <div className="grid gap-2">
-                      <Label htmlFor="description">Descripción</Label>
-                      <Textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="¿Qué aprenderán los alumnos?" required className="rounded-xl min-h-[100px]" />
+                      <Label>Descripción</Label>
+                      <Textarea value={description} onChange={(e) => setDescription(e.target.value)} required className="rounded-xl min-h-[100px]" />
                     </div>
 
                     <div className="flex gap-6 items-center">
                       <div className="flex items-center space-x-2">
-                        <input 
-                          type="checkbox" 
-                          id="isFree" 
-                          checked={isFree} 
-                          onChange={(e) => setIsFree(e.target.checked)}
-                          className="h-4 w-4 rounded border-gray-300 text-primary"
-                        />
-                        <Label htmlFor="isFree" className="cursor-pointer">Curso Gratuito</Label>
+                        <input type="checkbox" id="isFree" checked={isFree} onChange={(e) => setIsFree(e.target.checked)} className="h-4 w-4 rounded border-gray-300 text-primary" />
+                        <Label htmlFor="isFree">Curso Gratuito</Label>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <input 
-                          type="checkbox" 
-                          id="isActive" 
-                          checked={isActive} 
-                          onChange={(e) => setIsActive(e.target.checked)}
-                          className="h-4 w-4 rounded border-gray-300 text-primary"
-                        />
-                        <Label htmlFor="isActive" className="cursor-pointer">Publicado / Activo</Label>
+                        <input type="checkbox" id="isActive" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} className="h-4 w-4 rounded border-gray-300 text-primary" />
+                        <Label htmlFor="isActive">Publicado</Label>
                       </div>
                     </div>
                   </div>
                   <DialogFooter>
-                    <Button type="submit" className="w-full rounded-2xl h-14 text-lg font-bold shadow-xl shadow-primary/20" disabled={!technology}>
-                      {editingCourseId ? 'Guardar Cambios' : 'Publicar Curso'}
+                    <Button type="submit" className="w-full rounded-2xl h-14 text-lg font-bold">
+                      {editingCourseId ? 'Guardar Cambios' : 'Publicar'}
                     </Button>
                   </DialogFooter>
                 </form>
@@ -269,7 +238,7 @@ export default function AdminCoursesPage() {
           </div>
         </header>
 
-        <div className="bg-card rounded-3xl border shadow-sm overflow-hidden bg-white">
+        <div className="bg-white rounded-[2.5rem] border shadow-sm overflow-hidden">
           {isLoading ? (
             <div className="p-20 flex flex-col items-center justify-center gap-4">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -278,12 +247,12 @@ export default function AdminCoursesPage() {
           ) : (
             <Table>
               <TableHeader>
-                <TableRow className="bg-muted/30 hover:bg-muted/30 border-none">
-                  <TableHead className="rounded-tl-3xl pl-6">Título</TableHead>
+                <TableRow className="bg-slate-50 border-none">
+                  <TableHead className="pl-8 h-14">Curso</TableHead>
                   <TableHead>Tecnología</TableHead>
                   <TableHead>Vigencia</TableHead>
                   <TableHead>Estado</TableHead>
-                  <TableHead className="text-right pr-6 rounded-tr-3xl">Acciones</TableHead>
+                  <TableHead className="text-right pr-8">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -291,11 +260,11 @@ export default function AdminCoursesPage() {
                   const isExpired = course.closingDate && (course.closingDate instanceof Timestamp ? course.closingDate.toDate() : new Date(course.closingDate)) < new Date();
                   
                   return (
-                    <TableRow key={course.id} className="border-muted/20">
-                      <TableCell className="font-bold pl-6 py-5">
+                    <TableRow key={course.id} className="border-slate-100">
+                      <TableCell className="font-bold pl-8 py-5">
                         <div className="flex flex-col">
                           <span>{course.title}</span>
-                          <span className="text-[10px] text-muted-foreground font-normal line-clamp-1">{course.category}</span>
+                          <span className="text-[10px] text-muted-foreground font-normal">{course.category}</span>
                         </div>
                       </TableCell>
                       <TableCell>
@@ -317,19 +286,32 @@ export default function AdminCoursesPage() {
                       <TableCell>
                         <div className="flex flex-wrap gap-1">
                           {course.isActive ? (
-                             <Badge className="bg-emerald-500 text-white border-none rounded-lg h-5 text-[10px]">Activo</Badge>
+                             <Badge className="bg-emerald-500 text-white border-none rounded-lg text-[10px]">Activo</Badge>
                           ) : (
-                             <Badge className="bg-slate-300 text-slate-700 border-none rounded-lg h-5 text-[10px]">Borrador</Badge>
+                             <Badge className="bg-slate-300 text-slate-700 border-none rounded-lg text-[10px]">Borrador</Badge>
                           )}
                           {course.isFree ? (
-                            <Badge variant="outline" className="text-emerald-600 border-emerald-200 bg-emerald-50 rounded-lg h-5 text-[10px]">Gratis</Badge>
+                            <Badge variant="outline" className="text-emerald-600 border-emerald-200 bg-emerald-50 rounded-lg text-[10px]">Gratis</Badge>
                           ) : (
-                            <Badge variant="outline" className="text-amber-600 border-amber-200 bg-amber-50 rounded-lg h-5 text-[10px]">Premium</Badge>
+                            <Badge variant="outline" className="text-amber-600 border-amber-200 bg-amber-50 rounded-lg text-[10px]">Premium</Badge>
                           )}
                         </div>
                       </TableCell>
-                      <TableCell className="text-right pr-6">
+                      <TableCell className="text-right pr-8">
                         <div className="flex items-center justify-end gap-1">
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Link href={`/courses/${course.id}/certificate?preview=true`}>
+                                  <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl text-amber-600 hover:bg-amber-50">
+                                    <Eye className="h-4 w-4" />
+                                  </Button>
+                                </Link>
+                              </TooltipTrigger>
+                              <TooltipContent>Vista Previa Certificado</TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+
                           <Link href={`/admin/courses/${course.id}/content`}>
                             <Button variant="ghost" size="sm" className="gap-2 rounded-xl text-xs h-9">
                               <BookOpen className="h-3.5 w-3.5" />
@@ -367,5 +349,3 @@ export default function AdminCoursesPage() {
     </div>
   );
 }
-
-import { Users } from 'lucide-react';
