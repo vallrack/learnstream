@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -383,7 +382,7 @@ export default function AdminChallengesPage() {
               <p className="text-muted-foreground animate-pulse">Cargando desafíos...</p>
             </div>
           ) : techEntries.length > 0 ? (
-            <Accordion type="multiple" defaultValue={techEntries.map(([tech]) => tech)} className="space-y-4">
+            <Accordion type="multiple" className="space-y-4">
               {techEntries.map(([tech, techChallenges]) => (
                 <AccordionItem key={tech} value={tech} className="bg-white border rounded-[2rem] overflow-hidden px-6 shadow-sm">
                   <AccordionTrigger className="hover:no-underline py-6">
