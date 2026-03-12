@@ -231,6 +231,8 @@ function LessonResources({ courseId, moduleId, lessonId }: { courseId: string, m
   const { toast } = useToast();
   const [previewResource, setPreviewResource] = useState<any>(null);
 
+  const isGuest = !user || user.isAnonymous;
+
   const resourcesQuery = useMemoFirebase(() => {
     if (!db) return null;
     return query(collection(db, 'courses', courseId, 'modules', moduleId, 'lessons', lessonId, 'resources'), orderBy('orderIndex', 'asc'));
@@ -301,11 +303,11 @@ function LessonResources({ courseId, moduleId, lessonId }: { courseId: string, m
   };
 
   const handleResourceClick = (res: any) => {
-    if (!user) {
+    if (isGuest) {
       toast({
         variant: "destructive",
         title: "Acceso denegado",
-        description: "Inicia sesión para descargar o visualizar los recursos de apoyo.",
+        description: "Inicia sesión con una cuenta registrada para descargar o visualizar los recursos de apoyo.",
       });
       return;
     }
@@ -325,7 +327,7 @@ function LessonResources({ courseId, moduleId, lessonId }: { courseId: string, m
           {resources.map((res) => (
             <div 
               key={res.id} 
-              className={`flex items-center justify-between p-3 rounded-2xl transition-colors border border-transparent group cursor-pointer ${user ? 'hover:bg-muted/50 hover:border-border' : 'opacity-60 grayscale'}`}
+              className={`flex items-center justify-between p-3 rounded-2xl transition-colors border border-transparent group cursor-pointer ${!isGuest ? 'hover:bg-muted/50 hover:border-border' : 'opacity-60 grayscale'}`}
               onClick={() => handleResourceClick(res)}
             >
               <div className="flex items-center gap-3 overflow-hidden">
@@ -337,7 +339,7 @@ function LessonResources({ courseId, moduleId, lessonId }: { courseId: string, m
                   <span className="text-[10px] text-muted-foreground uppercase">{res.type}</span>
                 </div>
               </div>
-              {user ? (
+              {!isGuest ? (
                 <Eye className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors shrink-0" />
               ) : (
                 <Lock className="h-4 w-4 text-muted-foreground shrink-0" />
@@ -345,7 +347,7 @@ function LessonResources({ courseId, moduleId, lessonId }: { courseId: string, m
             </div>
           ))}
         </div>
-        {!user && (
+        {isGuest && (
           <div className="px-5 pb-5 pt-2">
             <Link href="/login">
               <Button variant="outline" size="sm" className="w-full text-[10px] h-8 rounded-xl border-amber-200 text-amber-700 hover:bg-amber-50 gap-1.5">
@@ -364,7 +366,7 @@ function LessonResources({ courseId, moduleId, lessonId }: { courseId: string, m
               <span className="truncate">{previewResource?.title}</span>
             </DialogTitle>
             <div className="flex items-center gap-2 pr-10">
-               {previewResource && (
+               {previewResource && !isGuest && (
                  <a href={previewResource.contentUrl} target="_blank" rel="noopener noreferrer">
                    <Button variant="outline" size="sm" className="h-9 gap-2 rounded-xl hidden sm:flex">
                      <Download className="h-4 w-4" />
@@ -379,7 +381,7 @@ function LessonResources({ courseId, moduleId, lessonId }: { courseId: string, m
           </DialogHeader>
           
           <div className="flex-1 bg-slate-100 relative">
-            {previewResource && isEmbeddable(previewResource) ? (
+            {previewResource && !isGuest && isEmbeddable(previewResource) ? (
               <iframe 
                 src={getPreviewUrl(previewResource)} 
                 className="w-full h-full border-none bg-white"
@@ -395,12 +397,14 @@ function LessonResources({ courseId, moduleId, lessonId }: { courseId: string, m
                   <h3 className="font-bold text-lg">Este recurso requiere abrirse externamente</h3>
                   <p className="text-sm text-muted-foreground">Por políticas de seguridad del sitio de origen (como Notion o algunos servicios de Microsoft), este contenido debe verse en su propia pestaña.</p>
                 </div>
-                <a href={previewResource.contentUrl} target="_blank" rel="noopener noreferrer">
-                  <Button className="h-12 px-8 rounded-xl gap-2 text-lg shadow-lg">
-                    Ver material completo
-                    <ExternalLink className="h-5 w-5" />
-                  </Button>
-                </a>
+                {!isGuest && (
+                  <a href={previewResource.contentUrl} target="_blank" rel="noopener noreferrer">
+                    <Button className="h-12 px-8 rounded-xl gap-2 text-lg shadow-lg">
+                      Ver material completo
+                      <ExternalLink className="h-5 w-5" />
+                    </Button>
+                  </a>
+                )}
               </div>
             )}
           </div>
