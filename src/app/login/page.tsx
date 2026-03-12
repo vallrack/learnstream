@@ -109,7 +109,7 @@ export default function LoginPage() {
       <main className="flex-1 flex items-center justify-center p-6">
         <div className="w-full max-w-md space-y-8">
           <div className="text-center space-y-2">
-            <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-slate-900 mb-4 overflow-hidden relative p-4">
+            <div className="inline-flex items-center justify-center w-24 h-24 mb-4 relative">
               <Image 
                 src={logoUrl} 
                 alt="LearnStream Logo" 
@@ -161,7 +161,7 @@ export default function LoginPage() {
                       <Input 
                         id="password" 
                         type="password" 
-                        placeholder="••••••••"
+                        placeholder="Tu contraseña secreta"
                         required 
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
@@ -178,6 +178,7 @@ export default function LoginPage() {
                 <TabsContent value="register" className="mt-0 space-y-4">
                   <div className="text-center py-4">
                     <p className="text-sm text-muted-foreground">Usa una cuenta existente o entra como invitado.</p>
+                    <Link href="/login" className="text-primary font-bold mt-2 inline-block">¿Ya tienes cuenta? Ingresa aquí</Link>
                   </div>
                 </TabsContent>
 

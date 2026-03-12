@@ -26,7 +26,7 @@ export default function Home() {
               <h1 className="text-4xl lg:text-7xl font-headline font-bold mb-6 leading-tight flex flex-wrap items-center justify-center lg:justify-start gap-x-4">
                 Master New Skills with 
                 <span className="text-primary flex items-center gap-3">
-                  <div className="relative w-12 h-12 lg:w-16 lg:h-16 rounded-2xl bg-slate-900 p-2 shadow-xl">
+                  <div className="relative w-16 h-16 rounded-2xl p-1">
                     <Image src={logoUrl} alt="Logo" fill className="object-contain" />
                   </div>
                   LearnStream
@@ -135,7 +135,7 @@ export default function Home() {
       <footer className="border-t py-12 px-6 bg-card">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
           <div className="flex items-center gap-2">
-            <div className="relative w-8 h-8 overflow-hidden rounded-lg bg-slate-900">
+            <div className="relative w-10 h-10 overflow-hidden rounded-lg">
               <Image 
                 src={logoUrl} 
                 alt="LearnStream Logo" 

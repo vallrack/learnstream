@@ -36,15 +36,15 @@ export function Navbar() {
     <nav className="border-b bg-card px-6 py-4 flex items-center justify-between sticky top-0 z-50">
       <div className="flex items-center gap-8">
         <Link href="/" className="flex items-center gap-3">
-          <div className="relative w-10 h-10 overflow-hidden rounded-xl bg-slate-900 shadow-lg shadow-primary/20">
+          <div className="relative w-12 h-12 overflow-hidden rounded-xl">
              <Image 
                 src={logoUrl} 
                 alt="LearnStream Logo" 
                 fill 
-                className="object-cover" 
+                className="object-contain" 
              />
           </div>
-          <span className="font-headline font-bold text-xl tracking-tight">LearnStream</span>
+          <span className="font-headline font-bold text-xl tracking-tight hidden sm:block">LearnStream</span>
         </Link>
         <div className="hidden md:flex items-center gap-6">
           <Link href="/courses" className="text-sm font-medium hover:text-primary transition-colors">Cursos</Link>
