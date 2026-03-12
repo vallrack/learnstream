@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useParams, useSearchParams } from 'next/navigation';
@@ -22,10 +21,11 @@ import {
   Download,
   Eye,
   ExternalLink,
-  X
+  X,
+  Lock
 } from 'lucide-react';
 import Link from 'next/link';
-import { useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useDoc, useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
 import { doc, collection, query, orderBy } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
@@ -36,6 +36,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { useToast } from '@/hooks/use-toast';
 
 export default function LessonPlayerPage() {
   const params = useParams();
@@ -226,6 +227,8 @@ export default function LessonPlayerPage() {
 
 function LessonResources({ courseId, moduleId, lessonId }: { courseId: string, moduleId: string, lessonId: string }) {
   const db = useFirestore();
+  const { user } = useUser();
+  const { toast } = useToast();
   const [previewResource, setPreviewResource] = useState<any>(null);
 
   const resourcesQuery = useMemoFirebase(() => {
@@ -297,6 +300,18 @@ function LessonResources({ courseId, moduleId, lessonId }: { courseId: string, m
            url.toLowerCase().match(/\.(pdf|docx|pptx|doc|ppt)$/i);
   };
 
+  const handleResourceClick = (res: any) => {
+    if (!user) {
+      toast({
+        variant: "destructive",
+        title: "Acceso denegado",
+        description: "Inicia sesión para descargar o visualizar los recursos de apoyo.",
+      });
+      return;
+    }
+    setPreviewResource(res);
+  };
+
   return (
     <>
       <div className="bg-card border rounded-3xl shadow-sm overflow-hidden">
@@ -310,8 +325,8 @@ function LessonResources({ courseId, moduleId, lessonId }: { courseId: string, m
           {resources.map((res) => (
             <div 
               key={res.id} 
-              className="flex items-center justify-between p-3 rounded-2xl hover:bg-muted/50 transition-colors border border-transparent hover:border-border group cursor-pointer"
-              onClick={() => setPreviewResource(res)}
+              className={`flex items-center justify-between p-3 rounded-2xl transition-colors border border-transparent group cursor-pointer ${user ? 'hover:bg-muted/50 hover:border-border' : 'opacity-60 grayscale'}`}
+              onClick={() => handleResourceClick(res)}
             >
               <div className="flex items-center gap-3 overflow-hidden">
                 <div className="bg-background p-2 rounded-xl shadow-sm border group-hover:bg-primary/5 transition-colors">
@@ -322,10 +337,23 @@ function LessonResources({ courseId, moduleId, lessonId }: { courseId: string, m
                   <span className="text-[10px] text-muted-foreground uppercase">{res.type}</span>
                 </div>
               </div>
-              <Eye className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors shrink-0" />
+              {user ? (
+                <Eye className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors shrink-0" />
+              ) : (
+                <Lock className="h-4 w-4 text-muted-foreground shrink-0" />
+              )}
             </div>
           ))}
         </div>
+        {!user && (
+          <div className="px-5 pb-5 pt-2">
+            <Link href="/login">
+              <Button variant="outline" size="sm" className="w-full text-[10px] h-8 rounded-xl border-amber-200 text-amber-700 hover:bg-amber-50 gap-1.5">
+                <Lock className="h-3 w-3" /> Iniciar sesión para desbloquear
+              </Button>
+            </Link>
+          </div>
+        )}
       </div>
 
       <Dialog open={!!previewResource} onOpenChange={(open) => !open && setPreviewResource(null)}>

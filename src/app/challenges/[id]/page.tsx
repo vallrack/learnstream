@@ -118,8 +118,8 @@ export default function ChallengeExecutionPage() {
       });
       setResult(evaluation);
 
-      // Persist result ONLY if logged in
-      if (user) {
+      // Persist result ONLY if logged in and NOT anonymous (strict check)
+      if (user && !user.isAnonymous) {
         addDocumentNonBlocking(collection(db, 'users', user.uid, 'challenge_submissions'), {
           challengeId: challenge.id,
           challengeTitle: challenge.title,
@@ -129,10 +129,12 @@ export default function ChallengeExecutionPage() {
           submittedAt: serverTimestamp()
         });
       } else {
-        // Invitación a registrarse para usuarios invitados
+        // Invitación a registrarse para usuarios invitados o anónimos
         toast({
           title: "¡Buen trabajo!",
-          description: "Tu código fue evaluado con éxito. Regístrate para guardar tu progreso y ver tus estadísticas.",
+          description: user?.isAnonymous 
+            ? "Tu código fue evaluado con éxito, pero los resultados no se guardan en modo invitado. Regístrate para guardar tu progreso."
+            : "Tu código fue evaluado con éxito. Regístrate para guardar tu progreso y ver tus estadísticas.",
           action: (
             <Link href="/login">
               <Button size="sm" className="gap-2">
@@ -237,12 +239,12 @@ export default function ChallengeExecutionPage() {
           </div>
           
           <div className="flex-1 overflow-y-auto p-6 space-y-8">
-            {!user && (
-              <section className="bg-primary/5 p-4 rounded-2xl border border-primary/10 mb-2">
+            {( !user || user.isAnonymous) && (
+              <section className="bg-amber-50 p-4 rounded-2xl border border-amber-200 mb-2">
                 <div className="flex gap-3">
-                  <Sparkles className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                  <p className="text-[10px] text-primary-foreground/70 text-slate-700 leading-normal">
-                    Estás en modo <strong>invitado</strong>. Tu código será evaluado por IA pero el progreso no se guardará.
+                  <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+                  <p className="text-[10px] text-amber-800 leading-normal font-medium">
+                    Estás en <strong>modo invitado</strong>. La IA evaluará tu código para que pruebes la experiencia, pero <strong>tus resultados no se guardarán</strong>.
                   </p>
                 </div>
               </section>
