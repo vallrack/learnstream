@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { PlayCircle, User, Crown, LayoutDashboard, LogOut, LogIn, Code2 } from 'lucide-react';
+import { PlayCircle, User, Crown, LayoutDashboard, LogOut, LogIn, Code2, Users } from 'lucide-react';
 import { useUser, useAuth, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { signOut } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
@@ -51,16 +51,22 @@ export function Navbar() {
       <div className="flex items-center gap-4">
         {user && isAdmin && (
           <div className="hidden lg:flex items-center gap-2">
+            <Link href="/admin/students">
+              <Button variant="ghost" size="sm" className="gap-2">
+                <Users className="h-4 w-4" />
+                Estudiantes
+              </Button>
+            </Link>
             <Link href="/admin/challenges">
               <Button variant="ghost" size="sm" className="gap-2">
                 <Code2 className="h-4 w-4" />
-                Gestionar Desafíos
+                Desafíos
               </Button>
             </Link>
             <Link href="/admin">
               <Button variant="ghost" size="sm" className="gap-2">
                 <LayoutDashboard className="h-4 w-4" />
-                Panel Admin
+                Cursos
               </Button>
             </Link>
           </div>

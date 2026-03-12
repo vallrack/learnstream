@@ -67,6 +67,8 @@
         "instructorId": { "type": "string" },
         "instructorName": { "type": "string" },
         "isFree": { "type": "boolean" },
+        "closingDate": { "type": "string", "format": "date-time", "description": "Fecha en la que el curso deja de estar disponible para no-pagos." },
+        "isActive": { "type": "boolean", "default": true },
         "createdAt": { "type": "string", "format": "date-time" },
         "updatedAt": { "type": "string", "format": "date-time" }
       },

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Navbar } from '@/components/layout/Navbar';
@@ -5,10 +6,10 @@ import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { PlayCircle, Users, Star, Clock, Globe, BookOpen, CheckCircle2, Loader2, Zap, ChevronRight, Play, Award } from 'lucide-react';
+import { PlayCircle, Users, Star, Clock, Globe, BookOpen, CheckCircle2, Loader2, Zap, ChevronRight, Play, Award, AlertTriangle, Lock } from 'lucide-react';
 import Link from 'next/link';
 import { useDoc, useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
-import { doc, collection, query, orderBy, limit } from 'firebase/firestore';
+import { doc, collection, query, orderBy, limit, Timestamp } from 'firebase/firestore';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { useState, useEffect } from 'react';
 
@@ -26,6 +27,12 @@ export default function CourseDetailPage() {
   }, [db, id]);
 
   const { data: course, isLoading: isCourseLoading } = useDoc(courseRef);
+
+  const profileRef = useMemoFirebase(() => {
+    if (!db || !user?.uid) return null;
+    return doc(db, 'users', user.uid);
+  }, [db, user?.uid]);
+  const { data: profile } = useDoc(profileRef);
 
   const modulesQuery = useMemoFirebase(() => {
     if (!db || !id) return null;
@@ -65,8 +72,14 @@ export default function CourseDetailPage() {
   }
 
   const isCompleted = progress?.status === 'completed';
+  const isPremium = !!profile?.isPremiumSubscriber;
   const imageSrc = course.thumbnailDataUrl || course.imageUrl || 'https://picsum.photos/seed/course/800/450';
   const previewVideoUrl = course.previewVideoUrl || null;
+
+  // Lógica de expiración
+  const closingDate = course.closingDate instanceof Timestamp ? course.closingDate.toDate() : (course.closingDate ? new Date(course.closingDate) : null);
+  const isExpired = closingDate && closingDate < new Date();
+  const accessDenied = isExpired && !isPremium;
 
   const formatVideoUrl = (url: string) => {
     if (!url) return '';
@@ -84,12 +97,17 @@ export default function CourseDetailPage() {
     <div className="min-h-screen bg-background pb-20">
       <Navbar />
       
-      {/* Hero Section con padding corregido */}
+      {/* Hero Section */}
       <div className="bg-slate-900 pt-16 pb-32 md:pb-40 px-6 relative overflow-hidden">
         <div className="absolute inset-0 bg-primary/10" />
         <div className="max-w-7xl mx-auto relative z-10 text-white">
           <div className="flex flex-wrap items-center gap-3 mb-6">
             <Badge className="bg-primary text-white border-none rounded-lg">{course.category || 'General'}</Badge>
+            {isExpired && (
+              <Badge variant="destructive" className="rounded-lg gap-1">
+                <Clock className="h-3 w-3" /> Curso Finalizado
+              </Badge>
+            )}
             <div className="flex items-center gap-1 text-sm text-white/80">
               <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
               <span className="font-bold text-white">4.8 (2.5k reseñas)</span>
@@ -106,10 +124,12 @@ export default function CourseDetailPage() {
               <Users className="h-4 w-4" /> 
               Instructor: <span className="text-white font-medium">{course.instructorName || 'Experto'}</span>
             </div>
-            <div className="flex items-center gap-2">
-              <Clock className="h-4 w-4" /> 
-              Última actualización: <span className="text-white font-medium">Marzo 2024</span>
-            </div>
+            {closingDate && (
+              <div className="flex items-center gap-2">
+                <Clock className="h-4 w-4" /> 
+                Fecha de cierre: <span className={`${isExpired ? 'text-rose-400' : 'text-white'} font-medium`}>{closingDate.toLocaleDateString()}</span>
+              </div>
+            )}
             <div className="flex items-center gap-2">
               <Globe className="h-4 w-4" /> 
               <span className="text-white font-medium">Español</span>
@@ -121,6 +141,22 @@ export default function CourseDetailPage() {
       <main className="max-w-7xl mx-auto px-6 -mt-20 md:-mt-24 relative z-20">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
           <div className="lg:col-span-2 space-y-12">
+            {accessDenied && (
+              <section className="bg-rose-50 border border-rose-200 p-8 rounded-[2rem] flex flex-col md:flex-row items-center gap-6 shadow-sm">
+                <div className="w-20 h-20 bg-rose-100 rounded-full flex items-center justify-center shrink-0">
+                  <Lock className="h-10 w-10 text-rose-600" />
+                </div>
+                <div className="flex-1 text-center md:text-left space-y-2">
+                  <h2 className="text-2xl font-headline font-bold text-rose-900">Curso Inactivo para Estándar</h2>
+                  <p className="text-rose-700">Este programa ha finalizado su periodo lectivo. Solo los alumnos **Premium** mantienen el acceso de por vida a los contenidos.</p>
+                </div>
+                <Button className="rounded-2xl h-14 px-8 bg-amber-500 hover:bg-amber-600 font-bold shadow-lg shadow-amber-200 gap-2">
+                  <Crown className="h-5 w-5" />
+                  Obtener Premium
+                </Button>
+              </section>
+            )}
+
             {isCompleted && (
               <section className="bg-emerald-50 border border-emerald-200 p-8 rounded-[2rem] flex flex-col md:flex-row items-center gap-6 animate-in fade-in slide-in-from-top-4 duration-500 shadow-sm">
                 <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center shrink-0">
@@ -139,27 +175,31 @@ export default function CourseDetailPage() {
               </section>
             )}
 
-            <section className="bg-card p-8 rounded-[2rem] border shadow-sm">
-              <h2 className="text-2xl font-headline font-bold mb-6 text-foreground">Lo que aprenderás</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {[
-                  "Dominio completo de la sintaxis y lógica",
-                  "Aplicación de mejores prácticas en proyectos reales",
-                  "Resolución de problemas complejos paso a paso",
-                  "Preparación para certificaciones oficiales"
-                ].map((item, i) => (
-                  <div key={i} className="flex gap-3 text-sm items-start">
-                    <CheckCircle2 className="h-5 w-5 text-emerald-500 shrink-0 mt-0.5" />
-                    <span className="text-foreground leading-relaxed">{item}</span>
+            {!accessDenied && (
+              <>
+                <section className="bg-card p-8 rounded-[2rem] border shadow-sm">
+                  <h2 className="text-2xl font-headline font-bold mb-6 text-foreground">Lo que aprenderás</h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {[
+                      "Dominio completo de la sintaxis y lógica",
+                      "Aplicación de mejores prácticas en proyectos reales",
+                      "Resolución de problemas complejos paso a paso",
+                      "Preparación para certificaciones oficiales"
+                    ].map((item, i) => (
+                      <div key={i} className="flex gap-3 text-sm items-start">
+                        <CheckCircle2 className="h-5 w-5 text-emerald-500 shrink-0 mt-0.5" />
+                        <span className="text-foreground leading-relaxed">{item}</span>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            </section>
+                </section>
 
-            <section>
-              <h2 className="text-2xl font-headline font-bold mb-6 text-foreground">Contenido del Curso</h2>
-              <CourseCurriculum courseId={id} />
-            </section>
+                <section>
+                  <h2 className="text-2xl font-headline font-bold mb-6 text-foreground">Contenido del Curso</h2>
+                  <CourseCurriculum courseId={id} />
+                </section>
+              </>
+            )}
           </div>
 
           <div className="space-y-6">
@@ -204,11 +244,14 @@ export default function CourseDetailPage() {
               <div className="p-8">
                 <div className="text-3xl font-headline font-bold mb-6 text-foreground">
                   {course.price > 0 ? `$${course.price}` : 'Gratis'}
-                  {course.isFree && <span className="text-sm font-normal text-muted-foreground ml-2">por tiempo limitado</span>}
                 </div>
                 
                 <div className="space-y-4">
-                  {isCompleted ? (
+                  {accessDenied ? (
+                    <Button disabled className="w-full h-12 text-lg font-bold rounded-xl opacity-50 grayscale">
+                      <Lock className="h-5 w-5 mr-2" /> Curso Finalizado
+                    </Button>
+                  ) : isCompleted ? (
                     <Link href={`/courses/${id}/certificate`} className="w-full">
                       <Button className="w-full h-12 text-lg font-bold bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-lg shadow-emerald-200 gap-2">
                         <Award className="h-5 w-5" />
@@ -226,15 +269,12 @@ export default function CourseDetailPage() {
                       Continuar Aprendiendo
                     </Button>
                   )}
-                  <Button variant="outline" className="w-full h-12 text-lg font-bold rounded-xl">
-                    Guardar curso
-                  </Button>
                 </div>
 
                 <div className="mt-8 space-y-4">
                   <p className="font-semibold text-sm text-foreground">Este curso incluye:</p>
                   <ul className="space-y-3 text-sm text-muted-foreground">
-                    <li className="flex items-center gap-3"><Clock className="h-4 w-4" /> Acceso ilimitado de por vida</li>
+                    <li className="flex items-center gap-3"><Clock className="h-4 w-4" /> {isPremium ? 'Acceso de por vida (Premium)' : (isExpired ? 'Acceso expirado' : 'Acceso temporal hasta cierre')}</li>
                     <li className="flex items-center gap-3"><BookOpen className="h-4 w-4" /> Material descargable</li>
                     <li className="flex items-center gap-3"><Zap className="h-4 w-4 text-primary" /> Asistente de IA 24/7</li>
                     <li className="flex items-center gap-3"><Award className="h-4 w-4 text-emerald-500" /> Certificado de finalización</li>
