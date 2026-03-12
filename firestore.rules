@@ -15,14 +15,14 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    function isCourseInstructor(instructorId) {
-      return isSignedIn() && request.auth.uid == instructorId;
-    }
-
-    // ✅ Verifica si el usuario existe y tiene el rol 'admin'
+    // ✅ Verifica si el usuario tiene el rol 'admin' de forma robusta
     function isAdmin() {
       let userPath = /databases/$(database)/documents/users/$(request.auth.uid);
       return isSignedIn() && exists(userPath) && get(userPath).data.role == 'admin';
+    }
+
+    function isCourseInstructor(instructorId) {
+      return isSignedIn() && request.auth.uid == instructorId;
     }
 
     function isParentCoursePublished(courseId) {
@@ -61,26 +61,26 @@ service cloud.firestore {
     }
 
     // ---------------------------------------------------------------------
-    // Contenido Educativo (Cursos, Módulos, Lecciones, Recursos)
+    // Contenido Educativo (Jerárquico)
     // ---------------------------------------------------------------------
 
     match /courses/{courseId} {
       allow get: if (resource.data.isPublished == true) || (isSignedIn() && (isCourseInstructor(resource.data.instructorId) || isAdmin()));
       allow list: if true; 
-      allow create: if (isSignedIn() && isCourseInstructor(request.resource.data.instructorId)) || isAdmin();
+      allow create: if isSignedIn() || isAdmin(); // Permitir creación inicial
       allow update, delete: if isCourseInstructor(resource.data.instructorId) || isAdmin();
 
       match /modules/{moduleId} {
-        allow read: if isAdmin() || isParentCoursePublished(courseId) || (isSignedIn() && isCourseInstructor(get(/databases/$(database)/documents/courses/$(courseId)).data.instructorId));
-        allow write: if isAdmin() || (isSignedIn() && isCourseInstructor(get(/databases/$(database)/documents/courses/$(courseId)).data.instructorId));
+        allow read: if isAdmin() || isParentCoursePublished(courseId);
+        allow write: if isAdmin() || isCourseInstructor(get(/databases/$(database)/documents/courses/$(courseId)).data.instructorId);
 
         match /lessons/{lessonId} {
-            allow read: if isAdmin() || isParentCoursePublished(courseId) || (isSignedIn() && isCourseInstructor(get(/databases/$(database)/documents/courses/$(courseId)).data.instructorId));
-            allow write: if isAdmin() || (isSignedIn() && isCourseInstructor(get(/databases/$(database)/documents/courses/$(courseId)).data.instructorId));
+            allow read: if isAdmin() || isParentCoursePublished(courseId);
+            allow write: if isAdmin() || isCourseInstructor(get(/databases/$(database)/documents/courses/$(courseId)).data.instructorId);
 
             match /resources/{resourceId} {
-                allow read: if isAdmin() || isParentCoursePublished(courseId) || (isSignedIn() && isCourseInstructor(get(/databases/$(database)/documents/courses/$(courseId)).data.instructorId));
-                allow write: if isAdmin() || (isSignedIn() && isCourseInstructor(get(/databases/$(database)/documents/courses/$(courseId)).data.instructorId));
+                allow read: if isAdmin() || isParentCoursePublished(courseId);
+                allow write: if isAdmin() || isCourseInstructor(get(/databases/$(database)/documents/courses/$(courseId)).data.instructorId);
             }
         }
       }
