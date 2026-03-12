@@ -49,14 +49,14 @@ export default function Home() {
             </div>
             
             <div className="flex-1 relative w-full aspect-video lg:aspect-square">
-              <div className="absolute inset-0 bg-primary/5 rounded-3xl -rotate-2 scale-105" />
-              <div className="relative w-full h-full rounded-3xl overflow-hidden shadow-2xl">
+              <div className="absolute inset-0 bg-primary/5 rounded-[3rem] -rotate-2 scale-105" />
+              <div className="relative w-full h-full rounded-[3rem] overflow-hidden bg-white shadow-2xl flex items-center justify-center p-12 md:p-20">
                 <Image 
-                  src="https://picsum.photos/seed/learnstream1/1200/600" 
-                  alt="LearnStream Platform Preview"
+                  src={logoUrl} 
+                  alt="LearnStream Logo Hero"
                   fill
-                  className="object-cover"
-                  data-ai-hint="learning app"
+                  className="object-contain p-8 md:p-16"
+                  priority
                 />
               </div>
             </div>
