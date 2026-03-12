@@ -18,8 +18,10 @@ import {
   X,
   FileText,
   Code2,
-  AlertTriangle
+  AlertTriangle,
+  PlayCircle
 } from 'lucide-react';
+import Link from 'next/link';
 import { 
   useCollection, 
   useDoc, 
