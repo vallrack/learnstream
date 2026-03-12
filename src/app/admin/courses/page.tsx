@@ -166,12 +166,9 @@ export default function AdminCoursesPage() {
                             <SelectLabel className="bg-muted/50 py-1.5">{category}</SelectLabel>
                             {Array.isArray(subgroups) 
                               ? subgroups.map(tech => <SelectItem key={tech} value={tech}>{tech}</SelectItem>)
-                              : Object.entries(subgroups).map(([sub, techs]) => (
-                                  <div key={sub} className="px-2">
-                                    <p className="text-[10px] uppercase font-bold text-muted-foreground mt-2 mb-1 pl-2">{sub}</p>
-                                    {techs.map(tech => <SelectItem key={tech} value={tech}>{tech}</SelectItem>)}
-                                  </div>
-                                ))
+                              : Object.entries(subgroups).flatMap(([sub, techs]) => 
+                                  techs.map(tech => <SelectItem key={tech} value={tech}>{tech}</SelectItem>)
+                                )
                             }
                           </SelectGroup>
                         ))}

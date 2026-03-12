@@ -143,10 +143,10 @@ export default function CourseContentAdminPage() {
           <div className="flex items-end justify-between gap-4">
             <div>
               <div className="flex items-center gap-2 mb-2">
-                <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20">{course?.technology}</Badge>
+                <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20">{course?.technology || 'Sin tecnología'}</Badge>
                 <h1 className="text-4xl font-headline font-bold">Contenido: {course?.title}</h1>
               </div>
-              <p className="text-muted-foreground">Gestiona módulos, lecciones y desafíos compatibles con {course?.technology}.</p>
+              <p className="text-muted-foreground">Gestiona módulos, lecciones y desafíos compatibles con {course?.technology || 'su tecnología'}.</p>
             </div>
             
             <Dialog open={isModuleDialogOpen} onOpenChange={(open) => {
@@ -354,10 +354,20 @@ function LessonManager({ course, moduleId, isAdmin }: { course: any, moduleId: s
               <DialogHeader>
                 <DialogTitle>{editingLesson ? 'Editar Contenido' : 'Añadir Contenido'}</DialogTitle>
                 <DialogDescription>
-                  Elige entre una clase de video o un desafío interactivo de {course.technology}.
+                  Elige entre una clase de video o un desafío interactivo de {course.technology || 'su tecnología'}.
                 </DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-6">
+                {!course.technology && (
+                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-2">
+                    <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5" />
+                    <div className="text-[10px] text-amber-700">
+                      <p className="font-bold">Este curso no tiene tecnología asignada.</p>
+                      <p>Ve a la lista de cursos y edítalo para elegir un lenguaje (ej: JavaScript) para poder asignar desafíos.</p>
+                    </div>
+                  </div>
+                )}
+
                 <div className="grid gap-2">
                   <Label>Tipo de Contenido</Label>
                   <Select value={type} onValueChange={(v: any) => setType(v)}>
@@ -388,7 +398,7 @@ function LessonManager({ course, moduleId, isAdmin }: { course: any, moduleId: s
                   </>
                 ) : (
                   <div className="grid gap-2">
-                    <Label>Seleccionar Desafío compatible ({course.technology})</Label>
+                    <Label>Seleccionar Desafío compatible ({course.technology || '??'})</Label>
                     <Select value={challengeId} onValueChange={setChallengeId} required>
                       <SelectTrigger className="rounded-xl h-12">
                         <SelectValue placeholder="Elige un reto..." />
@@ -406,7 +416,7 @@ function LessonManager({ course, moduleId, isAdmin }: { course: any, moduleId: s
                         ) : (
                           <div className="p-4 text-center space-y-2">
                             <AlertTriangle className="h-5 w-5 text-amber-500 mx-auto" />
-                            <p className="text-xs text-muted-foreground">No hay desafíos creados para {course.technology}.</p>
+                            <p className="text-xs text-muted-foreground">No hay desafíos creados para {course.technology || 'esta tecnología'}.</p>
                             <Button variant="link" size="sm" asChild>
                               <Link href="/admin/challenges">Crear uno ahora →</Link>
                             </Button>
@@ -439,7 +449,7 @@ function LessonManager({ course, moduleId, isAdmin }: { course: any, moduleId: s
                 </div>
               </div>
               <DialogFooter>
-                <Button type="submit" className="w-full rounded-xl h-11" disabled={type === 'challenge' && !challengeId}>
+                <Button type="submit" className="w-full rounded-xl h-11" disabled={(type === 'challenge' && !challengeId) || !course.technology}>
                   Guardar Contenido
                 </Button>
               </DialogFooter>
