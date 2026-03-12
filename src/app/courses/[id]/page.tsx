@@ -6,7 +6,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { PlayCircle, Users, Star, Clock, Globe, BookOpen, CheckCircle2, Loader2, Zap, ChevronRight, Play, Award, Lock, ShieldAlert } from 'lucide-react';
+import { PlayCircle, Users, Star, Clock, Globe, BookOpen, CheckCircle2, Loader2, Zap, ChevronRight, Play, Award, Lock, ShieldAlert, Code2 } from 'lucide-react';
 import Link from 'next/link';
 import { useDoc, useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
 import { doc, collection, query, orderBy, Timestamp } from 'firebase/firestore';
@@ -336,7 +336,11 @@ function ModuleLessons({ courseId, moduleId }: { courseId: string, moduleId: str
         <div key={lesson.id} className="flex items-center justify-between p-4 rounded-xl hover:bg-muted/30 transition-colors group border border-transparent">
           <div className="flex items-center gap-4">
             <div className="bg-muted p-2.5 rounded-xl group-hover:bg-primary/10 transition-colors">
-              <PlayCircle className="h-5 w-5 text-muted-foreground group-hover:text-primary" />
+              {lesson.type === 'challenge' ? (
+                <Code2 className="h-5 w-5 text-muted-foreground group-hover:text-primary" />
+              ) : (
+                <PlayCircle className="h-5 w-5 text-muted-foreground group-hover:text-primary" />
+              )}
             </div>
             <div>
               <p className="text-sm font-semibold group-hover:text-primary transition-colors text-foreground">
@@ -348,9 +352,10 @@ function ModuleLessons({ courseId, moduleId }: { courseId: string, moduleId: str
               </div>
             </div>
           </div>
-          <Button variant="ghost" size="sm" className="rounded-lg h-9 gap-1 font-bold" asChild>
+          <Button variant="ghost" size="sm" className={`rounded-lg h-9 gap-1 font-bold ${lesson.type === 'challenge' ? 'text-primary bg-primary/5 hover:bg-primary/10' : ''}`} asChild>
              <Link href={`/courses/${courseId}/learn/${lesson.id}?moduleId=${moduleId}`}>
-               Ver Clase <ChevronRight className="h-4 w-4" />
+               {lesson.type === 'challenge' ? 'Ir al Desafío' : 'Ver Clase'} 
+               <ChevronRight className="h-4 w-4" />
              </Link>
           </Button>
         </div>

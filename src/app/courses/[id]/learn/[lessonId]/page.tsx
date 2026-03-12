@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
@@ -20,7 +21,9 @@ import {
   Eye,
   ExternalLink,
   Lock,
-  Award
+  Award,
+  Code2,
+  ArrowRight
 } from 'lucide-react';
 import Link from 'next/link';
 import { useDoc, useCollection, useFirestore, useMemoFirebase, useUser, setDocumentNonBlocking } from '@/firebase';
@@ -184,52 +187,78 @@ function LessonPlayerContent() {
                 <Button variant="ghost" size="icon"><MoreVertical className="h-4 w-4" /></Button>
               </div>
 
-              {/* Video Player */}
-              {videoSource ? (
-                <div className="aspect-video bg-black rounded-2xl overflow-hidden shadow-2xl relative group">
-                  <iframe 
-                    width="100%" 
-                    height="100%" 
-                    src={formatVideoUrl(videoSource)} 
-                    title={displayTitle}
-                    frameBorder="0" 
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
-                    allowFullScreen
-                  ></iframe>
-                </div>
-              ) : (
-                <div className="aspect-video bg-muted rounded-2xl flex flex-col items-center justify-center gap-4 text-muted-foreground border-2 border-dashed">
-                  <PlayCircle className="h-12 w-12 opacity-20" />
-                  <p>Esta lección no incluye video.</p>
-                </div>
-              )}
-
-              {/* Lesson Info Tabs/Sections */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <div className="md:col-span-2 space-y-8">
-                  <article className="prose prose-slate max-w-none bg-card p-8 md:p-10 rounded-3xl border shadow-sm">
-                    <h1 className="text-3xl font-headline font-bold mb-6">{displayTitle}</h1>
-                    <div className="text-lg leading-relaxed text-muted-foreground space-y-6 whitespace-pre-wrap">
-                      {currentLesson.description || currentLesson.content || "No hay descripción disponible."}
-                    </div>
-                  </article>
-                </div>
-
-                {/* Resources Sidebar for the Lesson */}
-                <div className="space-y-6">
-                  <LessonResources courseId={courseId} moduleId={moduleId!} lessonId={lessonId} />
-                  
-                  <div className="bg-primary/5 border border-primary/10 rounded-3xl p-6">
-                    <h4 className="font-bold text-sm mb-3 flex items-center gap-2">
-                      <CheckCircle className="h-4 w-4 text-primary" />
-                      Tarea de hoy
-                    </h4>
-                    <p className="text-xs text-muted-foreground leading-relaxed">
-                      Explora el material adjunto y completa los ejercicios prácticos para reforzar lo aprendido hoy.
+              {/* Lesson Content - Challenge or Video */}
+              {currentLesson.type === 'challenge' ? (
+                <div className="flex flex-col items-center justify-center py-16 px-6 bg-white rounded-[3rem] border shadow-sm text-center space-y-8 animate-in fade-in zoom-in duration-500">
+                  <div className="bg-primary/10 p-8 rounded-[2rem] shadow-inner">
+                    <Code2 className="h-16 w-16 text-primary" />
+                  </div>
+                  <div className="space-y-3 max-w-lg">
+                    <Badge variant="secondary" className="px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest bg-primary/5 text-primary">Desafío Técnico</Badge>
+                    <h2 className="text-3xl font-headline font-bold text-slate-900">{currentLesson.title}</h2>
+                    <p className="text-muted-foreground leading-relaxed">
+                      Esta lección consiste en un reto práctico de {course.technology}. Pon a prueba tus conocimientos y recibe feedback instantáneo de nuestra IA.
                     </p>
                   </div>
+                  <Link href={`/challenges/${currentLesson.challengeId}`}>
+                    <Button className="h-16 px-12 rounded-[1.5rem] text-xl font-bold gap-3 shadow-2xl shadow-primary/30 group">
+                      <PlayCircle className="h-6 w-6 group-hover:scale-110 transition-transform" />
+                      Aceptar Desafío
+                      <ArrowRight className="h-5 w-5 ml-1" />
+                    </Button>
+                  </Link>
+                  <p className="text-[10px] text-muted-foreground italic font-medium">Se requiere abrir el editor de código interactivo para continuar.</p>
                 </div>
-              </div>
+              ) : (
+                <>
+                  {/* Video Player */}
+                  {videoSource ? (
+                    <div className="aspect-video bg-black rounded-2xl overflow-hidden shadow-2xl relative group">
+                      <iframe 
+                        width="100%" 
+                        height="100%" 
+                        src={formatVideoUrl(videoSource)} 
+                        title={displayTitle}
+                        frameBorder="0" 
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+                        allowFullScreen
+                      ></iframe>
+                    </div>
+                  ) : (
+                    <div className="aspect-video bg-muted rounded-2xl flex flex-col items-center justify-center gap-4 text-muted-foreground border-2 border-dashed">
+                      <PlayCircle className="h-12 w-12 opacity-20" />
+                      <p>Esta lección no incluye video.</p>
+                    </div>
+                  )}
+
+                  {/* Lesson Info Tabs/Sections */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <div className="md:col-span-2 space-y-8">
+                      <article className="prose prose-slate max-w-none bg-card p-8 md:p-10 rounded-3xl border shadow-sm">
+                        <h1 className="text-3xl font-headline font-bold mb-6">{displayTitle}</h1>
+                        <div className="text-lg leading-relaxed text-muted-foreground space-y-6 whitespace-pre-wrap">
+                          {currentLesson.description || currentLesson.content || "No hay descripción disponible."}
+                        </div>
+                      </article>
+                    </div>
+
+                    {/* Resources Sidebar for the Lesson */}
+                    <div className="space-y-6">
+                      <LessonResources courseId={courseId} moduleId={moduleId!} lessonId={lessonId} />
+                      
+                      <div className="bg-primary/5 border border-primary/10 rounded-3xl p-6">
+                        <h4 className="font-bold text-sm mb-3 flex items-center gap-2">
+                          <CheckCircle className="h-4 w-4 text-primary" />
+                          Tarea de hoy
+                        </h4>
+                        <p className="text-xs text-muted-foreground leading-relaxed">
+                          Explora el material adjunto y completa los ejercicios prácticos para reforzar lo aprendido hoy.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
 
               {/* Navigation Controls */}
               <div className="flex items-center justify-between pt-8 pb-20 border-t">
@@ -240,13 +269,15 @@ function LessonPlayerContent() {
                   </Button>
                 </Link>
                 
-                <Button 
-                  className="h-12 px-8 rounded-xl bg-emerald-600 hover:bg-emerald-700 gap-2 font-bold shadow-lg shadow-emerald-100"
-                  onClick={handleMarkAsCompleted}
-                >
-                  <CheckCircle className="h-5 w-5" />
-                  Marcar como completada
-                </Button>
+                {currentLesson.type !== 'challenge' && (
+                  <Button 
+                    className="h-12 px-8 rounded-xl bg-emerald-600 hover:bg-emerald-700 gap-2 font-bold shadow-lg shadow-emerald-100"
+                    onClick={handleMarkAsCompleted}
+                  >
+                    <CheckCircle className="h-5 w-5" />
+                    Marcar como completada
+                  </Button>
+                )}
               </div>
             </div>
           </div>
@@ -481,7 +512,7 @@ function ModuleInSidebar({ module, courseId, activeLessonId, index }: { module: 
               className={`block px-4 py-3 text-sm transition-colors hover:bg-muted/20 ${isActive ? 'bg-primary/5 text-primary border-l-2 border-primary font-medium' : ''}`}
             >
               <div className="flex items-center gap-3">
-                <CheckCircle className={`h-4 w-4 ${isActive ? 'text-primary' : 'text-muted-foreground/30'}`} />
+                {lesson.type === 'challenge' ? <Code2 className={`h-4 w-4 ${isActive ? 'text-primary' : 'text-muted-foreground/30'}`} /> : <CheckCircle className={`h-4 w-4 ${isActive ? 'text-primary' : 'text-muted-foreground/30'}`} />}
                 <span className="truncate">{lessonTitle}</span>
               </div>
             </Link>
