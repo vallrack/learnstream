@@ -54,12 +54,13 @@ export function CourseCertificate({
             Excelencia en Tecnología
           </p>
         </div>
-        <div className="relative w-20 h-20 opacity-80">
+        {/* Usamos mix-blend-screen para quitar el fondo negro de la imagen de Rawpixel */}
+        <div className="relative w-24 h-24 overflow-hidden flex items-center justify-center">
           <Image 
             src={platformLogoUrl} 
             alt="LearnStream Logo" 
             fill 
-            className="object-contain" 
+            className="object-contain mix-blend-screen" 
           />
         </div>
       </header>
