@@ -84,7 +84,8 @@ export default function CourseDetailPage() {
     <div className="min-h-screen bg-background pb-20">
       <Navbar />
       
-      <div className="bg-slate-900 py-16 px-6 relative overflow-hidden">
+      {/* Hero Section con padding corregido */}
+      <div className="bg-slate-900 pt-16 pb-32 md:pb-40 px-6 relative overflow-hidden">
         <div className="absolute inset-0 bg-primary/10" />
         <div className="max-w-7xl mx-auto relative z-10 text-white">
           <div className="flex flex-wrap items-center gap-3 mb-6">
@@ -101,18 +102,27 @@ export default function CourseDetailPage() {
             {course.description}
           </p>
           <div className="flex flex-wrap items-center gap-6 text-sm text-slate-400">
-            <div className="flex items-center gap-2"><Users className="h-4 w-4" /> Instructor: <span className="text-white">{course.instructorName || 'Experto'}</span></div>
-            <div className="flex items-center gap-2"><Clock className="h-4 w-4" /> Última actualización: <span className="text-white">Marzo 2024</span></div>
-            <div className="flex items-center gap-2"><Globe className="h-4 w-4" /> Español</div>
+            <div className="flex items-center gap-2">
+              <Users className="h-4 w-4" /> 
+              Instructor: <span className="text-white font-medium">{course.instructorName || 'Experto'}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Clock className="h-4 w-4" /> 
+              Última actualización: <span className="text-white font-medium">Marzo 2024</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Globe className="h-4 w-4" /> 
+              <span className="text-white font-medium">Español</span>
+            </div>
           </div>
         </div>
       </div>
 
-      <main className="max-w-7xl mx-auto px-6 -mt-12">
+      <main className="max-w-7xl mx-auto px-6 -mt-20 md:-mt-24 relative z-20">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
           <div className="lg:col-span-2 space-y-12">
             {isCompleted && (
-              <section className="bg-emerald-50 border border-emerald-200 p-8 rounded-[2rem] flex flex-col md:flex-row items-center gap-6 mt-20 md:mt-0 animate-in fade-in slide-in-from-top-4 duration-500">
+              <section className="bg-emerald-50 border border-emerald-200 p-8 rounded-[2rem] flex flex-col md:flex-row items-center gap-6 animate-in fade-in slide-in-from-top-4 duration-500 shadow-sm">
                 <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center shrink-0">
                   <Award className="h-10 w-10 text-emerald-600" />
                 </div>
@@ -129,18 +139,18 @@ export default function CourseDetailPage() {
               </section>
             )}
 
-            <section className={`bg-card p-8 rounded-2xl border shadow-sm ${!isCompleted ? 'mt-20 md:mt-0' : ''}`}>
+            <section className="bg-card p-8 rounded-[2rem] border shadow-sm">
               <h2 className="text-2xl font-headline font-bold mb-6 text-foreground">Lo que aprenderás</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {[
                   "Dominio completo de la sintaxis y lógica",
                   "Aplicación de mejores prácticas en proyectos reales",
                   "Resolución de problemas complejos paso a paso",
                   "Preparación para certificaciones oficiales"
                 ].map((item, i) => (
-                  <div key={i} className="flex gap-3 text-sm">
-                    <CheckCircle2 className="h-5 w-5 text-emerald-500 shrink-0" />
-                    <span className="text-foreground">{item}</span>
+                  <div key={i} className="flex gap-3 text-sm items-start">
+                    <CheckCircle2 className="h-5 w-5 text-emerald-500 shrink-0 mt-0.5" />
+                    <span className="text-foreground leading-relaxed">{item}</span>
                   </div>
                 ))}
               </div>
@@ -153,7 +163,7 @@ export default function CourseDetailPage() {
           </div>
 
           <div className="space-y-6">
-            <div className="bg-card rounded-2xl border shadow-2xl overflow-hidden sticky top-24">
+            <div className="bg-card rounded-[2rem] border shadow-2xl overflow-hidden sticky top-24">
               <div className="relative aspect-video bg-black group">
                 {showPreview && previewVideoUrl ? (
                   <iframe 
