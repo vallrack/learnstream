@@ -23,8 +23,14 @@ export default function Home() {
                 <Sparkles className="h-4 w-4" />
                 AI-Powered Learning Platform
               </div>
-              <h1 className="text-4xl lg:text-7xl font-headline font-bold mb-6 leading-tight">
-                Master New Skills with <span className="text-primary">LearnStream</span>
+              <h1 className="text-4xl lg:text-7xl font-headline font-bold mb-6 leading-tight flex flex-wrap items-center justify-center lg:justify-start gap-x-4">
+                Master New Skills with 
+                <span className="text-primary flex items-center gap-3">
+                  <div className="relative w-12 h-12 lg:w-16 lg:h-16 rounded-2xl bg-slate-900 p-2 shadow-xl">
+                    <Image src={logoUrl} alt="Logo" fill className="object-contain" />
+                  </div>
+                  LearnStream
+                </span>
               </h1>
               <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto lg:mx-0">
                 Join thousands of students learning from experts in development, design, and business. Start for free and unlock your potential.
@@ -129,12 +135,12 @@ export default function Home() {
       <footer className="border-t py-12 px-6 bg-card">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
           <div className="flex items-center gap-2">
-            <div className="relative w-8 h-8 overflow-hidden rounded-lg">
+            <div className="relative w-8 h-8 overflow-hidden rounded-lg bg-slate-900">
               <Image 
                 src={logoUrl} 
                 alt="LearnStream Logo" 
                 fill 
-                className="object-cover mix-blend-screen brightness-110" 
+                className="object-contain" 
               />
             </div>
             <span className="font-headline font-bold text-lg">LearnStream</span>

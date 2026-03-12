@@ -41,7 +41,7 @@ export function Navbar() {
                 src={logoUrl} 
                 alt="LearnStream Logo" 
                 fill 
-                className="object-cover mix-blend-screen brightness-110" 
+                className="object-cover" 
              />
           </div>
           <span className="font-headline font-bold text-xl tracking-tight">LearnStream</span>

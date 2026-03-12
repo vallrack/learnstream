@@ -109,12 +109,12 @@ export default function LoginPage() {
       <main className="flex-1 flex items-center justify-center p-6">
         <div className="w-full max-w-md space-y-8">
           <div className="text-center space-y-2">
-            <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-slate-900 mb-4 overflow-hidden relative">
+            <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-slate-900 mb-4 overflow-hidden relative p-4">
               <Image 
                 src={logoUrl} 
                 alt="LearnStream Logo" 
                 fill 
-                className="object-cover mix-blend-screen" 
+                className="object-contain" 
               />
             </div>
             <h1 className="text-3xl font-headline font-bold">Bienvenido a LearnStream</h1>

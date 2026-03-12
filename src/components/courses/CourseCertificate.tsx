@@ -60,7 +60,7 @@ export function CourseCertificate({
             src={platformLogoUrl} 
             alt="LearnStream Logo" 
             fill 
-            className="object-contain mix-blend-screen brightness-110 contrast-125 p-4" 
+            className="object-contain p-4" 
           />
         </div>
       </header>
