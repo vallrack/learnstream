@@ -68,34 +68,36 @@ export function LessonAssistant({ lessonContent }: { lessonContent: string }) {
                 <p className="text-xs text-muted-foreground max-w-[200px] mx-auto">
                   Pregúntame cualquier cosa sobre esta lección o solicita un resumen rápido.
                 </p>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={handleSummarize}
-                  disabled={summarizing}
-                  className="gap-2 text-xs"
-                >
-                  {summarizing ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
-                  Resumir Lección
-                </Button>
+                <div className="flex flex-col gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={handleSummarize}
+                    disabled={summarizing}
+                    className="gap-2 text-xs"
+                  >
+                    {summarizing ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                    Resumir Lección
+                  </Button>
+                </div>
               </div>
             )}
             {chat.map((msg, i) => (
               <div key={i} className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${msg.role === 'user' ? 'bg-primary' : 'bg-accent'}`}>
-                  {msg.role === 'user' ? <User className="h-4 w-4 text-white" /> : <Bot className="h-4 w-4 text-white" />}
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${msg.role === 'user' ? 'bg-primary' : 'bg-slate-200'}`}>
+                  {msg.role === 'user' ? <User className="h-4 w-4 text-white" /> : <Bot className="h-4 w-4 text-slate-600" />}
                 </div>
-                <div className={`p-3 rounded-lg text-sm max-w-[85%] ${msg.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-card border shadow-sm'}`}>
+                <div className={`p-3 rounded-lg text-sm max-w-[85%] ${msg.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-white border shadow-sm'}`}>
                   {msg.text}
                 </div>
               </div>
             ))}
             {loading && (
               <div className="flex gap-3">
-                <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center">
-                  <Bot className="h-4 w-4 text-white" />
+                <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center">
+                  <Bot className="h-4 w-4 text-slate-400" />
                 </div>
-                <div className="p-3 rounded-lg text-sm bg-card border shadow-sm flex items-center">
+                <div className="p-3 rounded-lg text-sm bg-white border shadow-sm flex items-center">
                   <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                 </div>
               </div>
@@ -103,7 +105,7 @@ export function LessonAssistant({ lessonContent }: { lessonContent: string }) {
           </div>
         </ScrollArea>
 
-        <div className="p-4 border-t bg-card">
+        <div className="p-4 border-t bg-white">
           <div className="relative">
             <Textarea
               placeholder="Haz una pregunta sobre el tema..."

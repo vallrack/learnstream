@@ -15,7 +15,7 @@ export default function Home() {
       <Navbar />
       
       <main className="flex-1">
-        {/* Hero Section */}
+        {/* Sección Hero */}
         <section className="relative py-20 px-6 lg:py-32 overflow-hidden">
           <div className="max-w-7xl mx-auto flex flex-col lg:flex-row items-center gap-12">
             <div className="flex-1 text-center lg:text-left z-10">
@@ -23,14 +23,9 @@ export default function Home() {
                 <Sparkles className="h-4 w-4" />
                 Plataforma de Aprendizaje con IA
               </div>
-              <h1 className="text-4xl lg:text-7xl font-headline font-bold mb-6 leading-tight flex flex-wrap items-center justify-center lg:justify-start gap-x-4">
+              <h1 className="text-4xl lg:text-7xl font-headline font-bold mb-6 leading-tight">
                 Domina nuevas habilidades con 
-                <span className="text-primary flex items-center gap-3">
-                  <div className="relative w-16 h-16 rounded-2xl p-1 bg-white shadow-sm">
-                    <Image src={logoUrl} alt="Logo" fill className="object-contain" />
-                  </div>
-                  LearnStream
-                </span>
+                <span className="text-primary block">LearnStream</span>
               </h1>
               <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto lg:mx-0">
                 Únete a miles de estudiantes que aprenden de expertos en desarrollo, diseño y negocios. Empieza gratis y desbloquea tu potencial.
@@ -48,14 +43,14 @@ export default function Home() {
               </div>
             </div>
             
-            <div className="flex-1 relative w-full aspect-video lg:aspect-square">
+            <div className="flex-1 relative w-full aspect-square max-w-[500px] mx-auto">
               <div className="absolute inset-0 bg-primary/5 rounded-[3rem] -rotate-2 scale-105" />
-              <div className="relative w-full h-full rounded-[3rem] overflow-hidden bg-white shadow-2xl flex items-center justify-center p-12 md:p-20">
+              <div className="relative w-full h-full rounded-[3rem] overflow-hidden bg-white shadow-2xl flex items-center justify-center p-8">
                 <Image 
                   src={logoUrl} 
-                  alt="LearnStream Logo Hero"
+                  alt="Logo LearnStream"
                   fill
-                  className="object-contain p-8 md:p-16"
+                  className="object-contain p-12"
                   priority
                 />
               </div>
@@ -63,7 +58,7 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Features Section */}
+        {/* Sección de Características */}
         <section className="py-20 bg-card border-y">
           <div className="max-w-7xl mx-auto px-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
@@ -92,7 +87,7 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Featured Courses */}
+        {/* Cursos Destacados */}
         <section className="py-24 px-6">
           <div className="max-w-7xl mx-auto">
             <div className="flex items-end justify-between mb-12">
@@ -113,7 +108,7 @@ export default function Home() {
           </div>
         </section>
 
-        {/* CTA Section */}
+        {/* Sección CTA */}
         <section className="py-20 px-6">
           <div className="max-w-5xl mx-auto rounded-[3rem] bg-primary p-12 lg:p-20 text-center relative overflow-hidden">
             <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2" />
@@ -138,7 +133,7 @@ export default function Home() {
             <div className="relative w-10 h-10 overflow-hidden rounded-lg">
               <Image 
                 src={logoUrl} 
-                alt="LearnStream Logo" 
+                alt="Logo LearnStream" 
                 fill 
                 className="object-contain" 
               />

@@ -16,7 +16,6 @@ export function Navbar() {
   const db = useFirestore();
   const router = useRouter();
 
-  // Consultar perfil para verificar rol
   const profileRef = useMemoFirebase(() => {
     if (!db || !user?.uid) return null;
     return doc(db, 'users', user.uid);
@@ -33,13 +32,13 @@ export function Navbar() {
   const logoUrl = "https://drive.google.com/uc?export=view&id=16eSjcZhzvz1dGapFrNVFXSQ_kG4dyg0i";
 
   return (
-    <nav className="border-b bg-card px-6 py-4 flex items-center justify-between sticky top-0 z-50">
+    <nav className="border-b bg-white px-6 py-4 flex items-center justify-between sticky top-0 z-50">
       <div className="flex items-center gap-8">
         <Link href="/" className="flex items-center gap-3">
-          <div className="relative w-12 h-12 overflow-hidden rounded-xl bg-slate-900 p-1">
+          <div className="relative w-12 h-12">
              <Image 
                 src={logoUrl} 
-                alt="LearnStream Logo" 
+                alt="Logo LearnStream" 
                 fill 
                 className="object-contain" 
              />
