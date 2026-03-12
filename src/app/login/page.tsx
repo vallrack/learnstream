@@ -36,17 +36,23 @@ export default function LoginPage() {
     if (!firestore || !authUser) return;
     
     const userRef = doc(firestore, 'users', authUser.uid);
-    const userDoc = await getDoc(userRef);
+    try {
+      const userDoc = await getDoc(userRef);
 
-    if (!userDoc.exists()) {
-      setDocumentNonBlocking(userRef, {
-        id: authUser.uid,
-        displayName: authUser.displayName || email.split('@')[0],
-        email: authUser.email,
-        profileImageUrl: authUser.photoURL || `https://picsum.photos/seed/${authUser.uid}/200/200`,
-        createdAt: serverTimestamp(),
-        isPremiumSubscriber: true,
-      }, { merge: true });
+      if (!userDoc.exists()) {
+        const defaultName = authUser.isAnonymous ? 'Invitado' : (email ? email.split('@')[0] : 'Estudiante');
+        setDocumentNonBlocking(userRef, {
+          id: authUser.uid,
+          displayName: authUser.displayName || defaultName,
+          email: authUser.email || null,
+          profileImageUrl: authUser.photoURL || `https://picsum.photos/seed/${authUser.uid}/200/200`,
+          createdAt: serverTimestamp(),
+          isPremiumSubscriber: authUser.isAnonymous ? false : true, // Los invitados no son premium por defecto
+          role: 'student'
+        }, { merge: true });
+      }
+    } catch (e) {
+      console.warn("Could not sync profile during login, might be a rules issue but proceed to dashboard", e);
     }
   };
 
@@ -83,7 +89,11 @@ export default function LoginPage() {
       await syncUserProfile(userCredential.user);
       router.push('/dashboard');
     } catch (err: any) {
-      setError({ message: 'Error al iniciar sesión como invitado.', code: err.code });
+      let message = 'Error al iniciar sesión como invitado.';
+      if (err.code === 'auth/admin-restricted-operation') {
+        message = 'El acceso de invitados está deshabilitado en Firebase. Por favor, habilita "Anonymous Sign-in" en la consola de Firebase.';
+      }
+      setError({ message, code: err.code });
       setLoading(false);
     }
   };
@@ -193,7 +203,7 @@ export default function LoginPage() {
                   onClick={handleAnonymousLogin}
                   disabled={loading}
                 >
-                  <UserCircle className="h-4 w-4" />
+                  {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserCircle className="h-4 w-4" />}
                   Continuar como Invitado
                 </Button>
               </CardContent>
