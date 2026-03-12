@@ -17,6 +17,8 @@ import {
   Link as LinkIcon,
   X,
   FileText,
+  Code2,
+  AlertTriangle
 } from 'lucide-react';
 import { 
   useCollection, 
@@ -46,6 +48,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Progress } from '@/components/ui/progress';
+import { Badge } from '@/components/ui/badge';
 
 export default function CourseContentAdminPage() {
   const params = useParams();
@@ -137,8 +140,11 @@ export default function CourseContentAdminPage() {
           
           <div className="flex items-end justify-between gap-4">
             <div>
-              <h1 className="text-4xl font-headline font-bold mb-2">Contenido: {course?.title}</h1>
-              <p className="text-muted-foreground">Organiza los módulos, lecciones y recursos.</p>
+              <div className="flex items-center gap-2 mb-2">
+                <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20">{course?.technology}</Badge>
+                <h1 className="text-4xl font-headline font-bold">Contenido: {course?.title}</h1>
+              </div>
+              <p className="text-muted-foreground">Gestiona módulos, lecciones y desafíos compatibles con {course?.technology}.</p>
             </div>
             
             <Dialog open={isModuleDialogOpen} onOpenChange={(open) => {
@@ -231,12 +237,23 @@ function LessonManager({ course, moduleId, isAdmin }: { course: any, moduleId: s
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingLesson, setEditingLesson] = useState<any>(null);
 
+  const [type, setType] = useState<'video' | 'challenge'>('video');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [videoUrl, setVideoUrl] = useState('');
+  const [challengeId, setChallengeId] = useState('');
   const [duration, setDuration] = useState('10');
   const [order, setOrder] = useState('0');
   const [isPremium, setIsPremium] = useState(false);
+
+  // Cargar desafíos para el selector (solo si coinciden con la tecnología del curso)
+  const challengesQuery = useMemoFirebase(() => {
+    if (!db) return null;
+    return collection(db, 'coding_challenges');
+  }, [db]);
+  const { data: allChallenges } = useCollection(challengesQuery);
+  
+  const compatibleChallenges = allChallenges?.filter(c => c.technology === course.technology) || [];
 
   const lessonsQuery = useMemoFirebase(() => {
     if (!db) return null;
@@ -249,10 +266,10 @@ function LessonManager({ course, moduleId, isAdmin }: { course: any, moduleId: s
     e.preventDefault();
     if (!db) return;
 
-    const lessonData = {
+    const lessonData: any = {
       title,
       description,
-      videoUrl,
+      type,
       durationInMinutes: parseInt(duration),
       orderIndex: parseInt(order),
       isPremium,
@@ -261,6 +278,17 @@ function LessonManager({ course, moduleId, isAdmin }: { course: any, moduleId: s
       courseIsFree: course.isFree ?? true,
       updatedAt: serverTimestamp(),
     };
+
+    if (type === 'video') {
+      lessonData.videoUrl = videoUrl;
+    } else {
+      lessonData.challengeId = challengeId;
+      const challenge = compatibleChallenges.find(c => c.id === challengeId);
+      if (challenge) {
+        lessonData.title = challenge.title;
+        lessonData.description = challenge.description;
+      }
+    }
 
     if (editingLesson) {
       updateDocumentNonBlocking(doc(db, 'courses', course.id, 'modules', moduleId, 'lessons', editingLesson.id), lessonData);
@@ -276,9 +304,11 @@ function LessonManager({ course, moduleId, isAdmin }: { course: any, moduleId: s
 
   const resetForm = () => {
     setEditingLesson(null);
+    setType('video');
     setTitle('');
     setDescription('');
     setVideoUrl('');
+    setChallengeId('');
     setDuration('10');
     setOrder('0');
     setIsPremium(false);
@@ -286,9 +316,11 @@ function LessonManager({ course, moduleId, isAdmin }: { course: any, moduleId: s
 
   const handleEdit = (lesson: any) => {
     setEditingLesson(lesson);
+    setType(lesson.type || 'video');
     setTitle(lesson.title || '');
     setDescription(lesson.description || '');
     setVideoUrl(lesson.videoUrl || '');
+    setChallengeId(lesson.challengeId || '');
     setDuration(lesson.durationInMinutes?.toString() || '10');
     setOrder(lesson.orderIndex?.toString() || '0');
     setIsPremium(lesson.isPremium || false);
@@ -305,38 +337,132 @@ function LessonManager({ course, moduleId, isAdmin }: { course: any, moduleId: s
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h4 className="font-bold text-sm text-muted-foreground uppercase">Lecciones</h4>
+        <h4 className="font-bold text-sm text-muted-foreground uppercase">Contenido del Módulo</h4>
         <Dialog open={isDialogOpen} onOpenChange={(open) => {
           setIsDialogOpen(open);
           if (!open) resetForm();
         }}>
           <DialogTrigger asChild>
             <Button size="sm" variant="outline" className="h-8 rounded-lg">
-              <Plus className="h-3 w-3 mr-1" /> Añadir Lección
+              <Plus className="h-3 w-3 mr-1" /> Añadir Contenido
             </Button>
           </DialogTrigger>
-          <DialogContent className="rounded-3xl">
+          <DialogContent className="rounded-3xl sm:max-w-[500px]">
             <form onSubmit={handleSaveLesson}>
-              <DialogHeader><DialogTitle>Lección</DialogTitle></DialogHeader>
-              <div className="grid gap-4 py-4">
-                <Input placeholder="Título" value={title} onChange={(e) => setTitle(e.target.value)} required />
-                <Input placeholder="URL Video (YouTube)" value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)} />
-                <Textarea placeholder="Descripción o Contenido" value={description} onChange={(e) => setDescription(e.target.value)} className="min-h-[150px]" />
-                <div className="flex items-center gap-2">
-                  <input type="checkbox" id="prem" checked={isPremium} onChange={(e) => setIsPremium(e.target.checked)} />
-                  <Label htmlFor="prem">Lección Premium (Requiere suscripción)</Label>
+              <DialogHeader>
+                <DialogTitle>{editingLesson ? 'Editar Contenido' : 'Añadir Contenido'}</DialogTitle>
+                <DialogDescription>
+                  Elige entre una clase de video o un desafío interactivo de {course.technology}.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-6">
+                <div className="grid gap-2">
+                  <Label>Tipo de Contenido</Label>
+                  <Select value={type} onValueChange={(v: any) => setType(v)}>
+                    <SelectTrigger className="rounded-xl">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="video">Clase de Video / Texto</SelectItem>
+                      <SelectItem value="challenge">Desafío de Código (Evaluado por IA)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {type === 'video' ? (
+                  <>
+                    <div className="grid gap-2">
+                      <Label>Título de la Clase</Label>
+                      <Input placeholder="Ej: Introducción a..." value={title} onChange={(e) => setTitle(e.target.value)} required className="rounded-xl" />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label>URL del Video (YouTube)</Label>
+                      <Input placeholder="https://youtube.com/..." value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)} className="rounded-xl" />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label>Descripción o Contenido Escrito</Label>
+                      <Textarea placeholder="Contenido de la lección..." value={description} onChange={(e) => setDescription(e.target.value)} className="min-h-[120px] rounded-xl" />
+                    </div>
+                  </>
+                ) : (
+                  <div className="grid gap-2">
+                    <Label>Seleccionar Desafío compatible ({course.technology})</Label>
+                    <Select value={challengeId} onValueChange={setChallengeId} required>
+                      <SelectTrigger className="rounded-xl h-12">
+                        <SelectValue placeholder="Elige un reto..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {compatibleChallenges.length > 0 ? (
+                          compatibleChallenges.map(c => (
+                            <SelectItem key={c.id} value={c.id}>
+                              <div className="flex flex-col items-start">
+                                <span className="font-bold">{c.title}</span>
+                                <span className="text-[10px] opacity-60 uppercase">{c.difficulty}</span>
+                              </div>
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <div className="p-4 text-center space-y-2">
+                            <AlertTriangle className="h-5 w-5 text-amber-500 mx-auto" />
+                            <p className="text-xs text-muted-foreground">No hay desafíos creados para {course.technology}.</p>
+                            <Button variant="link" size="sm" asChild>
+                              <Link href="/admin/challenges">Crear uno ahora →</Link>
+                            </Button>
+                          </div>
+                        )}
+                      </SelectContent>
+                    </Select>
+                    {compatibleChallenges.length === 0 && (
+                      <p className="text-[10px] text-amber-600 bg-amber-50 p-2 rounded-lg border border-amber-200">
+                        Solo puedes asignar desafíos que coincidan con la tecnología del curso.
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid gap-2">
+                    <Label>Duración (min)</Label>
+                    <Input type="number" value={duration} onChange={(e) => setDuration(e.target.value)} className="rounded-xl" />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label>Orden</Label>
+                    <Input type="number" value={order} onChange={(e) => setOrder(e.target.value)} className="rounded-xl" />
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 p-3 bg-muted/30 rounded-xl">
+                  <input type="checkbox" id="prem" checked={isPremium} onChange={(e) => setIsPremium(e.target.checked)} className="h-4 w-4 rounded border-gray-300 text-primary" />
+                  <Label htmlFor="prem" className="text-xs">Lección Premium (Solo suscriptores)</Label>
                 </div>
               </div>
-              <DialogFooter><Button type="submit" className="w-full">Guardar</Button></DialogFooter>
+              <DialogFooter>
+                <Button type="submit" className="w-full rounded-xl h-11" disabled={type === 'challenge' && !challengeId}>
+                  Guardar Contenido
+                </Button>
+              </DialogFooter>
             </form>
           </DialogContent>
         </Dialog>
       </div>
       <div className="space-y-4">
         {lessons?.map((lesson) => (
-          <div key={lesson.id} className="bg-slate-50 p-4 rounded-2xl border">
-            <div className="flex items-center justify-between mb-2">
-              <p className="font-bold text-sm">{lesson.title}</p>
+          <div key={lesson.id} className="bg-slate-50 p-4 rounded-2xl border flex flex-col gap-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className={`p-2 rounded-xl ${lesson.type === 'challenge' ? 'bg-primary/10 text-primary' : 'bg-slate-200 text-slate-600'}`}>
+                  {lesson.type === 'challenge' ? <Code2 className="h-5 w-5" /> : <PlayCircle className="h-5 w-5" />}
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <p className="font-bold text-sm">{lesson.title}</p>
+                    {lesson.isPremium && <Badge variant="outline" className="text-[10px] py-0 h-4 bg-amber-50 text-amber-600 border-amber-200">Premium</Badge>}
+                  </div>
+                  <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">
+                    {lesson.type === 'challenge' ? 'Desafío Evaluado' : 'Lección de Contenido'}
+                  </p>
+                </div>
+              </div>
               <div className="flex gap-1">
                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(lesson)}><Edit className="h-4 w-4" /></Button>
                 {isAdmin && (
@@ -344,9 +470,16 @@ function LessonManager({ course, moduleId, isAdmin }: { course: any, moduleId: s
                 )}
               </div>
             </div>
-            <ResourceManager course={course} moduleId={moduleId} lesson={lesson} isAdmin={isAdmin} />
+            {lesson.type === 'video' && (
+              <ResourceManager course={course} moduleId={moduleId} lesson={lesson} isAdmin={isAdmin} />
+            )}
           </div>
         ))}
+        {(!lessons || lessons.length === 0) && (
+          <div className="py-12 text-center bg-white rounded-2xl border-2 border-dashed">
+            <p className="text-sm text-muted-foreground italic">No hay lecciones en este módulo.</p>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -450,11 +583,11 @@ function ResourceManager({ course, moduleId, lesson, isAdmin }: { course: any, m
   };
 
   return (
-    <div className="mt-4 border-t pt-2">
-      <div className="flex items-center justify-between mb-2">
+    <div className="mt-4 border-t pt-4">
+      <div className="flex items-center justify-between mb-4">
         <p className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-1"><Paperclip className="h-3 w-3" /> Material de Apoyo</p>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild><Button size="sm" variant="ghost" className="h-6 text-[10px] border">Añadir Archivo/Link</Button></DialogTrigger>
+          <DialogTrigger asChild><Button size="sm" variant="ghost" className="h-7 text-[10px] border rounded-lg">Añadir Archivo</Button></DialogTrigger>
           <DialogContent className="rounded-3xl">
             <form onSubmit={handleSaveResource}>
               <DialogHeader><DialogTitle>Nuevo Recurso</DialogTitle></DialogHeader>
@@ -462,12 +595,12 @@ function ResourceManager({ course, moduleId, lesson, isAdmin }: { course: any, m
                 <div className="space-y-2">
                   <Label>Tipo de Recurso</Label>
                   <Select value={type} onValueChange={setType}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="pdf">Documento PDF (Subir)</SelectItem>
                       <SelectItem value="word">Documento Word (Subir)</SelectItem>
                       <SelectItem value="ppt">PowerPoint (Subir)</SelectItem>
-                      <SelectItem value="link">Enlace Externo (Drive, OneDrive, etc.)</SelectItem>
+                      <SelectItem value="link">Enlace Externo (Drive, Notion...)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -481,76 +614,66 @@ function ResourceManager({ course, moduleId, lesson, isAdmin }: { course: any, m
                           <Loader2 className="h-6 w-6 animate-spin text-primary" />
                           <div className="w-full">
                             <Progress value={uploadProgress} className="h-1" />
-                            <span className="text-[10px] text-muted-foreground mt-1 block">{Math.round(uploadProgress)}% subido</span>
                           </div>
                         </div>
                       ) : contentUrl ? (
                         <div className="flex flex-col items-center gap-2">
                           <div className="flex items-center justify-center gap-2 text-emerald-600 text-xs font-bold bg-emerald-50 px-3 py-1 rounded-full">
-                            Archivo listo <X className="h-3 w-3 cursor-pointer" onClick={() => setContentUrl('')} />
+                            Archivo cargado <X className="h-3 w-3 cursor-pointer" onClick={() => setContentUrl('')} />
                           </div>
-                          <p className="text-[10px] text-muted-foreground truncate max-w-[200px]">{contentUrl.split('/').pop()}</p>
                         </div>
                       ) : (
                         <>
                           <input type="file" id="file-upload" className="hidden" onChange={handleFileUpload} />
                           <label htmlFor="file-upload" className="cursor-pointer flex flex-col items-center gap-2 w-full">
                             <Upload className="h-6 w-6 text-muted-foreground" />
-                            <span className="text-xs text-muted-foreground">Haz clic para seleccionar un archivo</span>
+                            <span className="text-xs text-muted-foreground">Seleccionar archivo</span>
                           </label>
                         </>
                       )}
                     </div>
                   </div>
                 ) : (
-                  <div className="p-4 bg-primary/5 rounded-xl border border-primary/10 flex items-start gap-3">
-                    <LinkIcon className="h-5 w-5 text-primary mt-0.5" />
-                    <p className="text-xs text-muted-foreground">
-                      Pega una URL compartida de <strong>Google Drive, OneDrive, Notion</strong> o cualquier sitio externo.
-                    </p>
+                  <div className="space-y-2">
+                    <Label>URL del Enlace</Label>
+                    <Input 
+                      placeholder="https://drive.google.com/..." 
+                      value={contentUrl} 
+                      onChange={(e) => setContentUrl(e.target.value)} 
+                      required 
+                      className="rounded-xl"
+                    />
                   </div>
                 )}
 
                 <div className="space-y-2">
                   <Label>Título del Recurso</Label>
-                  <Input placeholder="Ej: Guía de ejercicios" value={title} onChange={(e) => setTitle(e.target.value)} required />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>{type === 'link' ? 'URL del Enlace' : 'URL del Archivo (Generada automáticamente)'}</Label>
-                  <Input 
-                    placeholder="https://drive.google.com/..." 
-                    value={contentUrl} 
-                    onChange={(e) => setContentUrl(e.target.value)} 
-                    required 
-                    readOnly={type !== 'link'}
-                    className={type !== 'link' ? 'bg-muted' : ''}
-                  />
+                  <Input placeholder="Ej: Guía de sintaxis" value={title} onChange={(e) => setTitle(e.target.value)} required className="rounded-xl" />
                 </div>
               </div>
-              <DialogFooter><Button type="submit" className="w-full" disabled={uploading || !contentUrl}>Guardar Recurso</Button></DialogFooter>
+              <DialogFooter><Button type="submit" className="w-full rounded-xl" disabled={uploading || !contentUrl}>Guardar</Button></DialogFooter>
             </form>
           </DialogContent>
         </Dialog>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         {resources?.map((res) => (
-          <div key={res.id} className="text-[10px] p-2 bg-white border rounded-lg flex items-center justify-between group">
-            <span className="truncate pr-2 flex items-center gap-1">
-              {res.type === 'link' ? <LinkIcon className="h-3 w-3" /> : res.type === 'pdf' ? <FileText className="h-3 w-3 text-red-500" /> : <Paperclip className="h-3 w-3" />}
+          <div key={res.id} className="text-[10px] p-2 bg-white border rounded-xl flex items-center justify-between group">
+            <span className="truncate pr-2 flex items-center gap-2">
+              {res.type === 'link' ? <LinkIcon className="h-3 w-3" /> : <FileText className="h-3 w-3" />}
               {res.title}
             </span>
             {isAdmin && (
               <Button 
                 variant="ghost" 
                 size="icon" 
-                className="h-8 w-8 text-destructive hover:bg-destructive/10" 
+                className="h-7 w-7 text-destructive hover:bg-destructive/10 rounded-lg" 
                 onClick={(e) => {
                   e.stopPropagation();
                   handleDeleteResource(res.id);
                 }}
               >
-                <Trash2 className="h-4 w-4" />
+                <Trash2 className="h-3 w-3" />
               </Button>
             )}
           </div>

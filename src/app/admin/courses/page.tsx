@@ -13,6 +13,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { TECH_STACK } from '@/lib/languages';
 import Link from 'next/link';
 
 export default function AdminCoursesPage() {
@@ -21,7 +23,6 @@ export default function AdminCoursesPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCourseId, setEditingCourseId] = useState<string | null>(null);
   
-  // Perfil para verificar rol
   const profileRef = useMemoFirebase(() => {
     if (!db || !user?.uid) return null;
     return doc(db, 'users', user.uid);
@@ -29,10 +30,10 @@ export default function AdminCoursesPage() {
   const { data: profile } = useDoc(profileRef);
   const isAdmin = profile?.role === 'admin';
 
-  // Form state
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
+  const [technology, setTechnology] = useState('');
   const [imageUrl, setImageUrl] = useState('');
   const [previewVideoUrl, setPreviewVideoUrl] = useState('');
   const [isFree, setIsFree] = useState(true);
@@ -49,6 +50,7 @@ export default function AdminCoursesPage() {
     setTitle('');
     setDescription('');
     setCategory('');
+    setTechnology('');
     setImageUrl('');
     setPreviewVideoUrl('');
     setIsFree(true);
@@ -59,6 +61,7 @@ export default function AdminCoursesPage() {
     setTitle(course.title || '');
     setDescription(course.description || '');
     setCategory(course.category || '');
+    setTechnology(course.technology || '');
     setImageUrl(course.thumbnailDataUrl || course.imageUrl || '');
     setPreviewVideoUrl(course.previewVideoUrl || '');
     setIsFree(course.isFree ?? true);
@@ -73,6 +76,7 @@ export default function AdminCoursesPage() {
       title,
       description,
       category,
+      technology,
       isFree,
       previewVideoUrl,
       updatedAt: serverTimestamp(),
@@ -130,34 +134,62 @@ export default function AdminCoursesPage() {
                 Crear Nuevo Curso
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[500px] rounded-3xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="sm:max-w-[600px] rounded-3xl max-h-[90vh] overflow-y-auto">
               <form onSubmit={handleFormSubmit}>
                 <DialogHeader>
                   <DialogTitle>{editingCourseId ? 'Editar Curso' : 'Nuevo Curso'}</DialogTitle>
                   <DialogDescription>
-                    {editingCourseId ? 'Modifica los detalles de tu curso.' : 'Completa los detalles para publicar tu nuevo curso.'}
+                    Define la tecnología principal del curso para habilitar desafíos compatibles.
                   </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="title">Título del Curso</Label>
+                      <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ej: Next.js Pro" required className="rounded-xl" />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="category">Área Principal</Label>
+                      <Input id="category" value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Ej: Desarrollo Web" required className="rounded-xl" />
+                    </div>
+                  </div>
+
                   <div className="grid gap-2">
-                    <Label htmlFor="title">Título del Curso</Label>
-                    <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ej: Next.js para Expertos" required className="rounded-xl" />
+                    <Label>Tecnología Específica</Label>
+                    <Select value={technology} onValueChange={setTechnology}>
+                      <SelectTrigger className="rounded-xl">
+                        <SelectValue placeholder="Selecciona el lenguaje o herramienta..." />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-[300px]">
+                        {Object.entries(TECH_STACK).map(([category, subgroups]) => (
+                          <SelectGroup key={category}>
+                            <SelectLabel className="bg-muted/50 py-1.5">{category}</SelectLabel>
+                            {Array.isArray(subgroups) 
+                              ? subgroups.map(tech => <SelectItem key={tech} value={tech}>{tech}</SelectItem>)
+                              : Object.entries(subgroups).map(([sub, techs]) => (
+                                  <div key={sub} className="px-2">
+                                    <p className="text-[10px] uppercase font-bold text-muted-foreground mt-2 mb-1 pl-2">{sub}</p>
+                                    {techs.map(tech => <SelectItem key={tech} value={tech}>{tech}</SelectItem>)}
+                                  </div>
+                                ))
+                            }
+                          </SelectGroup>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label htmlFor="imageUrl">URL Imagen de Portada</Label>
+                    <Input id="imageUrl" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="https://..." className="rounded-xl" />
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="category">Categoría</Label>
-                    <Input id="category" value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Ej: Desarrollo, Diseño..." required className="rounded-xl" />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="imageUrl">URL de la Imagen o Base64</Label>
-                    <Input id="imageUrl" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="https://ejemplo.com/imagen.jpg" className="rounded-xl" />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="previewVideoUrl">URL Video de Presentación (YouTube)</Label>
+                    <Label htmlFor="previewVideoUrl">URL Video Presentación</Label>
                     <Input id="previewVideoUrl" value={previewVideoUrl} onChange={(e) => setPreviewVideoUrl(e.target.value)} placeholder="https://youtube.com/..." className="rounded-xl" />
                   </div>
                   <div className="grid gap-2">
                     <Label htmlFor="description">Descripción</Label>
-                    <Textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="¿De qué trata este curso?" required className="rounded-xl min-h-[100px]" />
+                    <Textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="¿Qué aprenderán los alumnos?" required className="rounded-xl min-h-[100px]" />
                   </div>
                   <div className="flex items-center space-x-2">
                     <input 
@@ -167,12 +199,12 @@ export default function AdminCoursesPage() {
                       onChange={(e) => setIsFree(e.target.checked)}
                       className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
                     />
-                    <Label htmlFor="isFree">Este curso es gratuito</Label>
+                    <Label htmlFor="isFree">Curso Gratuito</Label>
                   </div>
                 </div>
                 <DialogFooter>
-                  <Button type="submit" className="w-full rounded-xl h-11">
-                    {editingCourseId ? 'Actualizar Curso' : 'Guardar Curso'}
+                  <Button type="submit" className="w-full rounded-xl h-11" disabled={!technology}>
+                    {editingCourseId ? 'Actualizar Curso' : 'Publicar Curso'}
                   </Button>
                 </DialogFooter>
               </form>
@@ -181,23 +213,17 @@ export default function AdminCoursesPage() {
         </header>
 
         <div className="bg-card rounded-2xl border shadow-sm overflow-hidden">
-          <div className="p-4 border-b flex items-center justify-between bg-muted/20">
-            <div className="flex items-center gap-2">
-              <Button variant="ghost" size="sm" className="bg-card shadow-sm"><ListIcon className="h-4 w-4 mr-2" /> Tabla</Button>
-            </div>
-          </div>
-          
           {isLoading ? (
             <div className="p-20 flex flex-col items-center justify-center gap-4">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              <p className="text-muted-foreground animate-pulse">Cargando cursos...</p>
+              <p className="text-muted-foreground">Cargando catálogo...</p>
             </div>
           ) : (
             <Table>
               <TableHeader>
-                <TableRow>
+                <TableRow className="bg-muted/30">
                   <TableHead>Título</TableHead>
-                  <TableHead>Categoría</TableHead>
+                  <TableHead>Tecnología</TableHead>
                   <TableHead>Estado</TableHead>
                   <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
@@ -205,9 +231,9 @@ export default function AdminCoursesPage() {
               <TableBody>
                 {courses?.map(course => (
                   <TableRow key={course.id}>
-                    <TableCell className="font-medium">{course.title}</TableCell>
+                    <TableCell className="font-bold">{course.title}</TableCell>
                     <TableCell>
-                      <Badge variant="outline" className="rounded-lg">{course.category}</Badge>
+                      <Badge variant="secondary" className="rounded-lg">{course.technology}</Badge>
                     </TableCell>
                     <TableCell>
                       {course.isFree ? (
@@ -227,7 +253,7 @@ export default function AdminCoursesPage() {
                         <Button 
                           variant="ghost" 
                           size="icon" 
-                          className="h-8 w-8 text-muted-foreground hover:text-primary"
+                          className="h-8 w-8"
                           onClick={() => handleEditClick(course)}
                         >
                           <Edit className="h-4 w-4" />
@@ -236,7 +262,7 @@ export default function AdminCoursesPage() {
                           <Button 
                             variant="ghost" 
                             size="icon" 
-                            className="h-8 w-8 text-destructive"
+                            className="h-8 w-8 text-destructive hover:bg-destructive/10"
                             onClick={() => handleDeleteCourse(course.id)}
                           >
                             <Trash2 className="h-4 w-4" />
