@@ -1,6 +1,6 @@
 'use client';
 
-import { useParams, useSearchParams } from 'next/navigation';
+import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import { Navbar } from '@/components/layout/Navbar';
 import { LessonAssistant } from '@/components/player/LessonAssistant';
 import { Button } from '@/components/ui/button';
@@ -22,11 +22,12 @@ import {
   Eye,
   ExternalLink,
   X,
-  Lock
+  Lock,
+  Award
 } from 'lucide-react';
 import Link from 'next/link';
-import { useDoc, useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
-import { doc, collection, query, orderBy } from 'firebase/firestore';
+import { useDoc, useCollection, useFirestore, useMemoFirebase, useUser, setDocumentNonBlocking } from '@/firebase';
+import { doc, collection, query, orderBy, serverTimestamp } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -41,7 +42,10 @@ import { useToast } from '@/hooks/use-toast';
 export default function LessonPlayerPage() {
   const params = useParams();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const db = useFirestore();
+  const { user } = useUser();
+  const { toast } = useToast();
 
   const courseId = params.id as string;
   const lessonId = params.lessonId as string;
@@ -67,6 +71,34 @@ export default function LessonPlayerPage() {
     return query(collection(db, 'courses', courseId, 'modules'), orderBy('orderIndex', 'asc'));
   }, [db, courseId]);
   const { data: modules, isLoading: isModulesLoading } = useCollection(modulesQuery);
+
+  const handleMarkAsCompleted = () => {
+    if (!db || !user || user.isAnonymous || !courseId) return;
+
+    const progressRef = doc(db, 'users', user.uid, 'courseProgress', courseId);
+    
+    // Simulating a "Complete All" or at least tracking this lesson
+    // For MVP, we'll mark the entire course as completed for demo purposes when they finish any lesson
+    // In a real app, this would be more granular
+    setDocumentNonBlocking(progressRef, {
+      courseId,
+      status: 'completed',
+      completedAt: serverTimestamp(),
+      progressPercentage: 100,
+      updatedAt: serverTimestamp(),
+    }, { merge: true });
+
+    toast({
+      title: "¡Lección completada!",
+      description: "Tu progreso ha sido guardado. Ya puedes generar tu certificado.",
+      action: (
+        <Button size="sm" className="gap-2" onClick={() => router.push(`/courses/${courseId}/certificate`)}>
+          <Award className="h-4 w-4" />
+          Ver Certificado
+        </Button>
+      ),
+    });
+  };
 
   if (isCourseLoading || isLessonLoading || isModulesLoading) {
     return (
@@ -207,7 +239,10 @@ export default function LessonPlayerPage() {
                   </Button>
                 </Link>
                 
-                <Button className="h-12 px-8 rounded-xl bg-emerald-600 hover:bg-emerald-700 gap-2">
+                <Button 
+                  className="h-12 px-8 rounded-xl bg-emerald-600 hover:bg-emerald-700 gap-2 font-bold shadow-lg shadow-emerald-100"
+                  onClick={handleMarkAsCompleted}
+                >
                   <CheckCircle className="h-5 w-5" />
                   Marcar como completada
                 </Button>
@@ -257,7 +292,6 @@ function LessonResources({ courseId, moduleId, lessonId }: { courseId: string, m
     if (!res.contentUrl) return '';
     const url = res.contentUrl;
     
-    // 1. Google Docs/Slides/Sheets (más robusto)
     if (url.includes('docs.google.com')) {
       if (url.includes('/presentation/')) {
         return url.replace(/\/edit.*$/, '/embed').replace(/\/view.*$/, '/embed');
@@ -270,7 +304,6 @@ function LessonResources({ courseId, moduleId, lessonId }: { courseId: string, m
       }
     }
 
-    // 2. Google Drive links (transformar a vista previa de iframe)
     if (url.includes('drive.google.com')) {
       const match = url.match(/\/d\/([a-zA-Z0-9-_]+)/);
       if (match && match[1]) {
@@ -278,7 +311,6 @@ function LessonResources({ courseId, moduleId, lessonId }: { courseId: string, m
       }
     }
 
-    // 3. Microsoft Office (Word, PPT) vía Visor de Microsoft
     const isOfficeDoc = ['word', 'ppt'].includes(res.type) || 
                        url.toLowerCase().match(/\.(docx|pptx|doc|ppt)$/i);
     
@@ -286,7 +318,6 @@ function LessonResources({ courseId, moduleId, lessonId }: { courseId: string, m
       return `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(url)}`;
     }
 
-    // 4. PDF (el navegador suele renderizarlos bien en iframe si son directos)
     if (res.type === 'pdf' || url.toLowerCase().endsWith('.pdf')) {
       return url;
     }

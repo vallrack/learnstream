@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Navbar } from '@/components/layout/Navbar';
@@ -6,9 +5,9 @@ import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { PlayCircle, Users, Star, Clock, Globe, BookOpen, CheckCircle2, Loader2, Zap, ChevronRight, Play } from 'lucide-react';
+import { PlayCircle, Users, Star, Clock, Globe, BookOpen, CheckCircle2, Loader2, Zap, ChevronRight, Play, Award } from 'lucide-react';
 import Link from 'next/link';
-import { useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useDoc, useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
 import { doc, collection, query, orderBy, limit } from 'firebase/firestore';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { useState, useEffect } from 'react';
@@ -18,6 +17,7 @@ export default function CourseDetailPage() {
   const router = useRouter();
   const id = params.id as string;
   const db = useFirestore();
+  const { user } = useUser();
   const [showPreview, setShowPreview] = useState(false);
 
   const courseRef = useMemoFirebase(() => {
@@ -33,20 +33,11 @@ export default function CourseDetailPage() {
   }, [db, id]);
   const { data: modules } = useCollection(modulesQuery);
 
-  // Obtener la primera lección para el botón "Comenzar ahora"
-  const [firstLessonPath, setFirstLessonPath] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (modules && modules.length > 0 && db) {
-      const firstModule = modules[0];
-      const lessonsRef = collection(db, 'courses', id, 'modules', firstModule.id, 'lessons');
-      const q = query(lessonsRef, orderBy('orderIndex', 'asc'), limit(1));
-      
-      // Simplemente intentamos obtener la ruta de la primera lección
-      // Nota: Aquí se podría usar un getDocs pero para mantenerlo simple y reactivo
-      // confiamos en la navegación manual o el primer elemento cargado.
-    }
-  }, [modules, db, id]);
+  const progressRef = useMemoFirebase(() => {
+    if (!db || !user?.uid || !id) return null;
+    return doc(db, 'users', user.uid, 'courseProgress', id);
+  }, [db, user?.uid, id]);
+  const { data: progress } = useDoc(progressRef);
 
   if (isCourseLoading) {
     return (
@@ -73,6 +64,7 @@ export default function CourseDetailPage() {
     );
   }
 
+  const isCompleted = progress?.status === 'completed';
   const imageSrc = course.thumbnailDataUrl || course.imageUrl || 'https://picsum.photos/seed/course/800/450';
   const previewVideoUrl = course.previewVideoUrl || null;
 
@@ -86,15 +78,6 @@ export default function CourseDetailPage() {
       return `https://www.youtube.com/embed/${id}`;
     }
     return url;
-  };
-
-  const handleStartCourse = () => {
-    if (modules && modules.length > 0) {
-      // Redirigir al curso (esto cargará el primer módulo y sus lecciones)
-      // Pero idealmente necesitamos el ID de la primera lección.
-      // Por ahora, si no hay lecciones cargadas, vamos a la página del curso.
-      // Si el usuario hace clic en los módulos, ya puede navegar.
-    }
   };
 
   return (
@@ -128,7 +111,25 @@ export default function CourseDetailPage() {
       <main className="max-w-7xl mx-auto px-6 -mt-12">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
           <div className="lg:col-span-2 space-y-12">
-            <section className="bg-card p-8 rounded-2xl border shadow-sm mt-20 md:mt-0">
+            {isCompleted && (
+              <section className="bg-emerald-50 border border-emerald-200 p-8 rounded-[2rem] flex flex-col md:flex-row items-center gap-6 mt-20 md:mt-0 animate-in fade-in slide-in-from-top-4 duration-500">
+                <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center shrink-0">
+                  <Award className="h-10 w-10 text-emerald-600" />
+                </div>
+                <div className="flex-1 text-center md:text-left space-y-2">
+                  <h2 className="text-2xl font-headline font-bold text-emerald-900">¡Felicidades, completaste este curso!</h2>
+                  <p className="text-emerald-700">Has demostrado tu compromiso. Ya puedes descargar tu certificado oficial.</p>
+                </div>
+                <Link href={`/courses/${id}/certificate`}>
+                  <Button className="rounded-2xl h-14 px-8 bg-emerald-600 hover:bg-emerald-700 font-bold shadow-lg shadow-emerald-200 gap-2">
+                    <Award className="h-5 w-5" />
+                    Ver Certificado
+                  </Button>
+                </Link>
+              </section>
+            )}
+
+            <section className={`bg-card p-8 rounded-2xl border shadow-sm ${!isCompleted ? 'mt-20 md:mt-0' : ''}`}>
               <h2 className="text-2xl font-headline font-bold mb-6 text-foreground">Lo que aprenderás</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {[
@@ -197,19 +198,24 @@ export default function CourseDetailPage() {
                 </div>
                 
                 <div className="space-y-4">
-                  <Button 
-                    className="w-full h-12 text-lg font-bold bg-primary hover:bg-primary/90 rounded-xl shadow-lg shadow-primary/20"
-                    onClick={() => {
-                      const firstModule = modules?.[0];
-                      if (firstModule) {
-                         // Scroll al contenido para que el usuario elija la lección
-                         const curriculum = document.getElementById('curriculum');
-                         curriculum?.scrollIntoView({ behavior: 'smooth' });
-                      }
-                    }}
-                  >
-                    Comenzar ahora
-                  </Button>
+                  {isCompleted ? (
+                    <Link href={`/courses/${id}/certificate`} className="w-full">
+                      <Button className="w-full h-12 text-lg font-bold bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-lg shadow-emerald-200 gap-2">
+                        <Award className="h-5 w-5" />
+                        Obtener Certificado
+                      </Button>
+                    </Link>
+                  ) : (
+                    <Button 
+                      className="w-full h-12 text-lg font-bold bg-primary hover:bg-primary/90 rounded-xl shadow-lg shadow-primary/20"
+                      onClick={() => {
+                        const curriculum = document.getElementById('curriculum');
+                        curriculum?.scrollIntoView({ behavior: 'smooth' });
+                      }}
+                    >
+                      Continuar Aprendiendo
+                    </Button>
+                  )}
                   <Button variant="outline" className="w-full h-12 text-lg font-bold rounded-xl">
                     Guardar curso
                   </Button>
@@ -221,6 +227,7 @@ export default function CourseDetailPage() {
                     <li className="flex items-center gap-3"><Clock className="h-4 w-4" /> Acceso ilimitado de por vida</li>
                     <li className="flex items-center gap-3"><BookOpen className="h-4 w-4" /> Material descargable</li>
                     <li className="flex items-center gap-3"><Zap className="h-4 w-4 text-primary" /> Asistente de IA 24/7</li>
+                    <li className="flex items-center gap-3"><Award className="h-4 w-4 text-emerald-500" /> Certificado de finalización</li>
                   </ul>
                 </div>
               </div>
