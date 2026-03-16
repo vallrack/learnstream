@@ -35,6 +35,11 @@ export const es = {
         desc: "Obtén resúmenes y respuestas al instante con nuestro asistente de lecciones integrado."
       }
     },
+    coursesSection: {
+      title: "Empieza a aprender hoy",
+      subtitle: "Elige entre nuestros cursos gratuitos y premium más populares.",
+      viewAll: "Ver todos los cursos →"
+    },
     ctaTitle: "¿Listo para impulsar tu carrera?",
     ctaSubtitle: "Obtén acceso ilimitado a todos los cursos, proyectos y nuestras funciones exclusivas de IA con una suscripción premium.",
     ctaBtn: "Obtener Acceso Ilimitado"

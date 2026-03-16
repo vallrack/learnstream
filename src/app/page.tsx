@@ -4,16 +4,29 @@
 import { Navbar } from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
 import { CourseCard } from '@/components/courses/CourseCard';
-import { MOCK_COURSES } from '@/lib/mock-data';
-import { Rocket, ShieldCheck, Zap, Sparkles, PlayCircle } from 'lucide-react';
+import { Rocket, ShieldCheck, Zap, Sparkles, PlayCircle, Loader2, BookOpen } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useTranslation } from '@/lib/i18n/use-translation';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection, query, limit, where } from 'firebase/firestore';
 
 export default function Home() {
   const { t } = useTranslation();
-  const featuredCourses = MOCK_COURSES.slice(0, 3);
+  const db = useFirestore();
   const logoUrl = "https://drive.google.com/uc?export=view&id=16eSjcZhzvz1dGapFrNVFXSQ_kG4dyg0i";
+
+  // Consulta real de cursos desde Firestore (limitado a 3 para el Home)
+  const coursesQuery = useMemoFirebase(() => {
+    if (!db) return null;
+    return query(
+      collection(db, 'courses'), 
+      where('isActive', '==', true),
+      limit(3)
+    );
+  }, [db]);
+
+  const { data: featuredCourses, isLoading } = useCollection(coursesQuery);
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -92,24 +105,42 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Featured Courses */}
-        <section className="py-24 px-6">
+        {/* Real Featured Courses Section */}
+        <section className="py-24 px-6 bg-slate-50/50">
           <div className="max-w-7xl mx-auto">
-            <div className="flex items-end justify-between mb-12">
-              <div>
-                <h2 className="text-3xl font-headline font-bold mb-4">{t.common.language === 'es' ? 'Empieza a aprender hoy' : 'Start learning today'}</h2>
-                <p className="text-muted-foreground">{t.common.language === 'es' ? 'Elige entre nuestros cursos gratuitos y premium más populares.' : 'Choose from our most popular free and premium courses.'}</p>
+            <div className="flex flex-col md:flex-row items-center md:items-end justify-between mb-12 gap-6">
+              <div className="text-center md:text-left">
+                <h2 className="text-3xl font-headline font-bold mb-4">{t.home.coursesSection.title}</h2>
+                <p className="text-muted-foreground">{t.home.coursesSection.subtitle}</p>
               </div>
               <Link href="/courses">
-                <Button variant="link" className="text-primary font-semibold p-0 h-auto">{t.common.language === 'es' ? 'Ver todos los cursos →' : 'See all courses →'}</Button>
+                <Button variant="link" className="text-primary font-bold p-0 h-auto text-lg">
+                  {t.home.coursesSection.viewAll}
+                </Button>
               </Link>
             </div>
             
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-              {featuredCourses.map(course => (
-                <CourseCard key={course.id} course={course} />
-              ))}
-            </div>
+            {isLoading ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="aspect-video bg-muted animate-pulse rounded-[2.5rem]" />
+                ))}
+              </div>
+            ) : featuredCourses && featuredCourses.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+                {featuredCourses.map(course => (
+                  <CourseCard key={course.id} course={course} />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-20 bg-white rounded-[3rem] border-4 border-dashed max-w-2xl mx-auto flex flex-col items-center gap-4">
+                <BookOpen className="h-12 w-12 text-muted-foreground opacity-20" />
+                <p className="text-muted-foreground font-medium">Estamos preparando contenido increíble para ti.</p>
+                <Link href="/admin">
+                  <Button variant="outline">Crear primer curso</Button>
+                </Link>
+              </div>
+            )}
           </div>
         </section>
 

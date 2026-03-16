@@ -35,6 +35,11 @@ export const en = {
         desc: "Get instant summaries and answers with our built-in lesson assistant."
       }
     },
+    coursesSection: {
+      title: "Start learning today",
+      subtitle: "Choose from our most popular free and premium courses.",
+      viewAll: "See all courses →"
+    },
     ctaTitle: "Ready to boost your career?",
     ctaSubtitle: "Get unlimited access to all courses, projects, and our exclusive AI features with a premium subscription.",
     ctaBtn: "Get Unlimited Access"
