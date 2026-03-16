@@ -40,16 +40,19 @@ export default function LoginPage() {
   const syncUserProfile = async (authUser: any, nameOverride?: string) => {
     if (!firestore || !authUser) return;
     
+    // CRÍTICO: No creamos documento en Firestore para usuarios anónimos (invitados)
+    // Esto evita llenar la base de datos de perfiles vacíos.
+    if (authUser.isAnonymous) return;
+
     const userRef = doc(firestore, 'users', authUser.uid);
     try {
       const userDoc = await getDoc(userRef);
 
       if (!userDoc.exists()) {
-        const defaultName = authUser.isAnonymous ? 'Invitado' : (nameOverride || email.split('@')[0] || 'Estudiante');
         setDocumentNonBlocking(userRef, {
           id: authUser.uid,
-          displayName: authUser.displayName || defaultName,
-          email: authUser.email || null,
+          displayName: nameOverride || email.split('@')[0] || 'Estudiante',
+          email: authUser.email,
           profileImageUrl: authUser.photoURL || `https://picsum.photos/seed/${authUser.uid}/200/200`,
           createdAt: serverTimestamp(),
           isPremiumSubscriber: false,
@@ -123,8 +126,8 @@ export default function LoginPage() {
     setLoading(true);
     setError(null);
     try {
-      const userCredential = await signInAnonymously(auth);
-      await syncUserProfile(userCredential.user);
+      await signInAnonymously(auth);
+      // No llamamos a syncUserProfile para invitados
       router.push('/dashboard');
     } catch (err: any) {
       let message = 'Error al iniciar sesión como invitado.';

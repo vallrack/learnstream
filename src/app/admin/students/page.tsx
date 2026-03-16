@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -48,9 +47,13 @@ export default function AdminStudentsPage() {
   }, [db]);
   const { data: allCourses } = useCollection(coursesQuery);
 
+  // FILTRO CLAVE: Solo mostramos usuarios que tengan email (usuarios registrados)
+  // Esto elimina automáticamente a los "Invitados" de la lista de gestión.
   const filteredStudents = students?.filter(s => 
-    s.displayName?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    s.email?.toLowerCase().includes(searchTerm.toLowerCase())
+    s.email && (
+      s.displayName?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      s.email?.toLowerCase().includes(searchTerm.toLowerCase())
+    )
   ) || [];
 
   return (
@@ -74,7 +77,7 @@ export default function AdminStudentsPage() {
                   </div>
                   <h1 className="text-4xl font-headline font-bold">Gestión de Alumnos</h1>
                 </div>
-                <p className="text-muted-foreground">Monitorea el progreso y activa/desactiva cuentas de estudiantes.</p>
+                <p className="text-muted-foreground">Monitorea el progreso y activa/desactiva cuentas de estudiantes reales.</p>
               </div>
               
               <div className="relative w-full md:w-80">
@@ -106,56 +109,64 @@ export default function AdminStudentsPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredStudents.map((student) => (
-                      <TableRow key={student.id} className={`border-slate-100 group ${student.isActive === false ? 'opacity-60 grayscale' : ''}`}>
-                        <TableCell className="pl-8 py-4">
-                          <div className="flex items-center gap-3">
-                            <Avatar className="h-10 w-10 border-2 border-slate-100">
-                              <AvatarImage src={student.profileImageUrl} />
-                              <AvatarFallback><UserCircle className="h-6 w-6" /></AvatarFallback>
-                            </Avatar>
-                            <div className="flex flex-col">
-                              <span className="font-bold text-slate-900">{student.displayName || 'Estudiante'}</span>
-                              <span className="text-xs text-muted-foreground">{student.email || 'Modo Invitado'}</span>
+                    {filteredStudents.length > 0 ? (
+                      filteredStudents.map((student) => (
+                        <TableRow key={student.id} className={`border-slate-100 group ${student.isActive === false ? 'opacity-60 grayscale' : ''}`}>
+                          <TableCell className="pl-8 py-4">
+                            <div className="flex items-center gap-3">
+                              <Avatar className="h-10 w-10 border-2 border-slate-100">
+                                <AvatarImage src={student.profileImageUrl} />
+                                <AvatarFallback><UserCircle className="h-6 w-6" /></AvatarFallback>
+                              </Avatar>
+                              <div className="flex flex-col">
+                                <span className="font-bold text-slate-900">{student.displayName || 'Estudiante'}</span>
+                                <span className="text-xs text-muted-foreground">{student.email}</span>
+                              </div>
                             </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          {student.isActive === false ? (
-                            <Badge variant="destructive" className="rounded-lg gap-1">
-                              <UserX className="h-3 w-3" /> Inactivo
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline" className="text-emerald-600 border-emerald-200 bg-emerald-50 rounded-lg gap-1">
-                              <UserCheck className="h-3 w-3" /> Activo
-                            </Badge>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {student.isPremiumSubscriber ? (
-                            <Badge className="bg-amber-100 text-amber-700 border-amber-200 hover:bg-amber-100 gap-1 rounded-lg">
-                              <Crown className="h-3 w-3" /> Premium
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline" className="text-slate-500 rounded-lg">Estándar</Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-slate-500 text-sm">
-                          {student.createdAt ? new Date(student.createdAt.toDate()).toLocaleDateString() : 'N/A'}
-                        </TableCell>
-                        <TableCell className="text-right pr-8">
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="rounded-xl gap-2 h-10 group-hover:bg-primary group-hover:text-white transition-all"
-                            onClick={() => setSelectedStudentId(student.id)}
-                          >
-                            Gestionar
-                            <ChevronRight className="h-4 w-4" />
-                          </Button>
+                          </TableCell>
+                          <TableCell>
+                            {student.isActive === false ? (
+                              <Badge variant="destructive" className="rounded-lg gap-1">
+                                <UserX className="h-3 w-3" /> Inactivo
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-emerald-600 border-emerald-200 bg-emerald-50 rounded-lg gap-1">
+                                <UserCheck className="h-3 w-3" /> Activo
+                              </Badge>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {student.isPremiumSubscriber ? (
+                              <Badge className="bg-amber-100 text-amber-700 border-amber-200 hover:bg-amber-100 gap-1 rounded-lg">
+                                <Crown className="h-3 w-3" /> Premium
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-slate-500 rounded-lg">Estándar</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-slate-500 text-sm">
+                            {student.createdAt ? new Date(student.createdAt.toDate()).toLocaleDateString() : 'N/A'}
+                          </TableCell>
+                          <TableCell className="text-right pr-8">
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="rounded-xl gap-2 h-10 group-hover:bg-primary group-hover:text-white transition-all"
+                              onClick={() => setSelectedStudentId(student.id)}
+                            >
+                              Gestionar
+                              <ChevronRight className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={5} className="h-40 text-center text-muted-foreground">
+                          No hay alumnos registrados que coincidan con la búsqueda.
                         </TableCell>
                       </TableRow>
-                    ))}
+                    )}
                   </TableBody>
                 </Table>
               )}
