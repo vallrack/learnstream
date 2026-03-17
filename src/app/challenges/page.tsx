@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Navbar } from '@/components/layout/Navbar';
@@ -7,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Search, Code2, Terminal, ArrowRight, Loader2, Sparkles, Layout, Lock, Unlock, LogIn, EyeOff } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useCollection, useFirestore, useMemoFirebase, useUser, useDoc } from '@/firebase';
-import { collection, query, orderBy, doc } from 'firebase/firestore';
+import { collection, query, doc } from 'firebase/firestore';
 import Link from 'next/link';
 import { useState, useMemo } from 'react';
 
@@ -49,7 +50,8 @@ export default function ChallengesCataloguePage() {
 
   const challengesQuery = useMemoFirebase(() => {
     if (!db) return null;
-    return query(collection(db, 'coding_challenges'), orderBy('createdAt', 'desc'));
+    // Eliminamos orderBy para asegurar que se muestren incluso retos sin fecha
+    return collection(db, 'coding_challenges');
   }, [db]);
 
   const { data: allChallenges, isLoading: isChallengesLoading } = useCollection(challengesQuery);
@@ -63,22 +65,30 @@ export default function ChallengesCataloguePage() {
     }
   };
 
-  // FILTRADO INTELIGENTE: 
-  // 1. El Administrador ve TODO.
-  // 2. El Estudiante ve desafíos de sus cursos (Privados).
-  // 3. EL Estudiante ve desafíos Públicos que coincidan con la tecnología de sus cursos inscritos.
+  // FILTRADO INTELIGENTE CORREGIDO:
   const filteredChallenges = useMemo(() => {
-    return allChallenges?.filter(challenge => {
+    if (!allChallenges) return [];
+    
+    return allChallenges.filter(challenge => {
+      // Si es admin, ve todo
+      if (isAdmin) return true;
+
+      // 1. Desafíos vinculados directamente a sus cursos (Privados o Públicos con ID de curso)
       const isLinkedToEnrolledCourse = challenge.courseId && enrolledCourseIds.includes(challenge.courseId);
-      const isPublicMatchingTech = challenge.visibility === 'public' && enrolledTechnologies.includes(challenge.technology);
       
-      const isVisible = isAdmin || isLinkedToEnrolledCourse || isPublicMatchingTech;
+      // 2. Desafíos que coinciden con sus tecnologías (Solo si son públicos o no tienen visibilidad definida)
+      const isPublic = !challenge.visibility || challenge.visibility === 'public';
+      const isMatchingTech = enrolledTechnologies.includes(challenge.technology);
+      const isPublicMatchingTech = isPublic && isMatchingTech;
       
-      const matchesSearch = challenge.title?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      const isVisible = isLinkedToEnrolledCourse || isPublicMatchingTech;
+      
+      const matchesSearch = !searchTerm || 
+                            challenge.title?.toLowerCase().includes(searchTerm.toLowerCase()) || 
                             challenge.technology?.toLowerCase().includes(searchTerm.toLowerCase());
       
       return isVisible && matchesSearch;
-    }) || [];
+    });
   }, [allChallenges, isAdmin, enrolledCourseIds, enrolledTechnologies, searchTerm]);
 
   const groupedChallenges = useMemo(() => {

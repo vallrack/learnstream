@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
@@ -89,17 +90,17 @@ export default function ChallengeExecutionPage() {
     }
   }, [challenge]);
 
-  // VERIFICACIÓN DE SEGURIDAD COHERENTE:
-  // El estudiante puede acceder si:
-  // 1. Es admin.
-  // 2. El reto está vinculado a uno de sus cursos inscritos.
-  // 3. El reto es público Y su tecnología coincide con uno de sus cursos.
+  // VERIFICACIÓN DE SEGURIDAD FLEXIBLE:
   const canAccessChallenge = useMemo(() => {
     if (!challenge) return false;
     if (profile?.role === 'admin') return true;
     
+    // Acceso si está vinculado a un curso inscrito
     const isLinkedToEnrolledCourse = challenge.courseId && enrolledCourseIds.includes(challenge.courseId);
-    const isPublicMatchingTech = challenge.visibility === 'public' && enrolledTechnologies.includes(challenge.technology);
+    
+    // Acceso si es público (o sin visibilidad definida) y coincide con la tecnología
+    const isPublic = !challenge.visibility || challenge.visibility === 'public';
+    const isPublicMatchingTech = isPublic && enrolledTechnologies.includes(challenge.technology);
     
     return isLinkedToEnrolledCourse || isPublicMatchingTech;
   }, [challenge, profile, enrolledCourseIds, enrolledTechnologies]);
@@ -283,7 +284,7 @@ export default function ChallengeExecutionPage() {
             {isEvaluating && (
               <div className="absolute inset-0 bg-slate-950/50 backdrop-blur-sm flex items-center justify-center z-20">
                 <div className="flex flex-col items-center gap-4 p-8 bg-slate-900 rounded-[2.5rem] border border-white/10 text-center">
-                  <Sparkles className="h-12 w-12 text-primary animate-pulse" />
+                  <span className="text-primary text-4xl animate-bounce">✨</span>
                   <h3 className="text-white font-headline font-bold text-lg">La IA está evaluando...</h3>
                 </div>
               </div>
