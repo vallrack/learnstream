@@ -52,6 +52,18 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'dashboard.epayco.co',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'static.epayco.co',
+        port: '',
+        pathname: '/**',
+      },
     ],
   },
 };

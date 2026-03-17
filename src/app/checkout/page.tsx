@@ -26,6 +26,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Script from 'next/script';
+import Image from 'next/image';
 
 export default function CheckoutPage() {
   const { user, isUserLoading } = useUser();
@@ -174,16 +175,24 @@ export default function CheckoutPage() {
       />
       
       <main className="max-w-6xl mx-auto px-6 py-12">
-        {/* Aviso de Configuración para el Admin */}
-        {user?.email === 'varrack67@gmail.com' && (
-          <div className="mb-8 p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-start gap-4">
-            <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
-            <div className="text-sm text-amber-800">
-              <p className="font-bold mb-1">Nota para el Administrador:</p>
-              <p>Si la pasarela se queda cargando, asegúrate de añadir este dominio en tu panel de ePayco:</p>
-              <code className="block mt-2 bg-white/50 p-2 rounded border font-mono text-[10px] break-all">
-                {typeof window !== 'undefined' ? window.location.origin : 'Cargando...'}
-              </code>
+        {/* Aviso de Configuración para el Admin con dominio exacto */}
+        {(user?.email === 'varrack67@gmail.com' || user?.email === 'vallrack67@gmail.com') && (
+          <div className="mb-8 p-6 bg-rose-50 border-2 border-rose-200 rounded-[2rem] flex flex-col md:flex-row items-start gap-6 animate-pulse">
+            <div className="bg-rose-100 p-3 rounded-2xl">
+              <AlertTriangle className="h-8 w-8 text-rose-600 shrink-0" />
+            </div>
+            <div className="text-sm text-rose-900 space-y-3">
+              <p className="text-lg font-bold">¡Acción Requerida para habilitar el Pago!</p>
+              <p>La pasarela se queda cargando porque **ePayco bloquea dominios no autorizados**. Copia el siguiente dominio y agrégalo en tu panel de ePayco (**Configuración > Propiedades > Dominios Permitidos**):</p>
+              <div className="flex items-center gap-2">
+                <code className="flex-1 bg-white/80 p-3 rounded-xl border border-rose-200 font-mono text-xs break-all shadow-inner">
+                  {typeof window !== 'undefined' ? window.location.origin : 'Cargando dominio...'}
+                </code>
+                <Button size="sm" variant="outline" className="rounded-lg h-10" onClick={() => {
+                  navigator.clipboard.writeText(window.location.origin);
+                  toast({ title: "Dominio copiado", description: "Pégalo en el panel de ePayco." });
+                }}>Copiar</Button>
+              </div>
             </div>
           </div>
         )}
@@ -262,7 +271,7 @@ export default function CheckoutPage() {
                       <Button 
                         onClick={handleValidateCoupon} 
                         disabled={isValidatingCoupon || !couponCode.trim()} 
-                        className="rounded-xl h-11 bg-slate-900"
+                        className="rounded-xl h-11 bg-slate-900 text-white"
                       >
                         {isValidatingCoupon ? <Loader2 className="h-4 w-4 animate-spin" /> : "Aplicar"}
                       </Button>
@@ -285,7 +294,7 @@ export default function CheckoutPage() {
                 <Button 
                   onClick={handleStartPayment} 
                   disabled={isProcessing || !isScriptLoaded}
-                  className="w-full h-16 rounded-2xl text-xl font-bold shadow-xl shadow-primary/20 transition-all hover:scale-[1.02] bg-primary"
+                  className="w-full h-16 rounded-2xl text-xl font-bold shadow-xl shadow-primary/20 transition-all hover:scale-[1.02] bg-primary text-white"
                 >
                   {isProcessing ? (
                     <>
@@ -311,14 +320,22 @@ export default function CheckoutPage() {
                 </div>
               </div>
             </CardContent>
-            <CardFooter className="bg-slate-50/50 p-6 flex flex-col gap-6">
-              <div className="flex flex-wrap justify-center items-center gap-6 h-8">
-                <img src="https://multimedia.epayco.co/epayco-landing/v2/pse.png" alt="PSE" className="h-full object-contain" />
-                <img src="https://multimedia.epayco.co/epayco-landing/v2/nequi.png" alt="Nequi" className="h-full object-contain" />
-                <img src="https://multimedia.epayco.co/epayco-landing/v2/daviplata.png" alt="Daviplata" className="h-full object-contain" />
-                <img src="https://multimedia.epayco.co/epayco-landing/v2/efecty.png" alt="Efecty" className="h-full object-contain" />
+            <CardFooter className="bg-slate-50/50 p-8 flex flex-col gap-8 border-t border-dashed">
+              <div className="flex flex-wrap justify-center items-center gap-8">
+                <div className="relative w-12 h-12 grayscale hover:grayscale-0 transition-all">
+                  <Image src="https://dashboard.epayco.co/img/pse.png" alt="PSE" fill className="object-contain" />
+                </div>
+                <div className="relative w-16 h-8 grayscale hover:grayscale-0 transition-all">
+                  <Image src="https://dashboard.epayco.co/img/nequi.png" alt="Nequi" fill className="object-contain" />
+                </div>
+                <div className="relative w-20 h-8 grayscale hover:grayscale-0 transition-all">
+                  <Image src="https://dashboard.epayco.co/img/daviplata.png" alt="Daviplata" fill className="object-contain" />
+                </div>
+                <div className="relative w-16 h-8 grayscale hover:grayscale-0 transition-all">
+                  <Image src="https://dashboard.epayco.co/img/efecty.png" alt="Efecty" fill className="object-contain" />
+                </div>
               </div>
-              <p className="text-[10px] text-center text-muted-foreground leading-relaxed px-4 max-w-sm">
+              <p className="text-[10px] text-center text-muted-foreground leading-relaxed px-4 max-w-sm font-medium">
                 Tu acceso Premium se activará automáticamente una vez confirmado el pago. Soporte disponible 24/7.
               </p>
             </CardFooter>
