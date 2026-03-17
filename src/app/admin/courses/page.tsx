@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -167,7 +168,7 @@ export default function AdminCoursesPage() {
             <Link href="/admin/students">
               <Button variant="outline" className="rounded-xl h-11 gap-2 shadow-sm">
                 <Users className="h-4 w-4" />
-                Alumnos
+                Estudiantes
               </Button>
             </Link>
             <Dialog open={isDialogOpen} onOpenChange={(open) => {

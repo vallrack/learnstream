@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -94,7 +95,7 @@ export default function AdminChallengesPage() {
     if (!db) return null;
     return collection(db, 'coding_challenges');
   }, [db]);
-  const { data: challenges, isLoading } = useCollection(challengesQuery);
+  const { data: challenges, isLoading: isChallengesLoading } = useCollection(challengesQuery);
 
   const coursesQuery = useMemoFirebase(() => {
     if (!db) return null;
@@ -211,7 +212,7 @@ export default function AdminChallengesPage() {
                 <DialogHeader>
                   <DialogTitle className="text-2xl font-headline">{editingId ? 'Editar Desafío' : 'Crear Desafío'}</DialogTitle>
                   <DialogDescription>
-                    Define la visibilidad y requisitos técnicos. Los desafíos privados solo aparecen si el alumno está inscrito en el curso asociado.
+                    Define la visibilidad y requisitos técnicos. Los desafíos privados solo aparecen si el estudiante está inscrito en el curso asociado.
                   </DialogDescription>
                 </DialogHeader>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-10 py-8">
@@ -254,7 +255,7 @@ export default function AdminChallengesPage() {
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild><Info className="h-3 w-3 text-muted-foreground cursor-help" /></TooltipTrigger>
-                              <TooltipContent><p className="text-[10px]">Solo los alumnos inscritos en este curso verán el desafío.</p></TooltipContent>
+                              <TooltipContent><p className="text-[10px]">Solo los estudiantes inscritos en este curso verán el desafío.</p></TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
                         </Label>
@@ -306,7 +307,7 @@ export default function AdminChallengesPage() {
                         value={description} 
                         onChange={(e) => setDescription(e.target.value)} 
                         className="min-h-[150px] rounded-2xl resize-none" 
-                        placeholder="Explica qué debe resolver el alumno..." 
+                        placeholder="Explica qué debe resolver el estudiante..." 
                       />
                     </div>
                   </div>
@@ -378,7 +379,7 @@ export default function AdminChallengesPage() {
 
         {/* Lista Agrupada */}
         <div className="space-y-4">
-          {isLoading ? (
+          {isChallengesLoading ? (
             <div className="p-20 flex flex-col items-center justify-center gap-4 bg-white rounded-[2rem] border">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
               <p className="text-muted-foreground animate-pulse">Cargando desafíos...</p>

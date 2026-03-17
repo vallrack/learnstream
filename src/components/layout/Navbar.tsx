@@ -76,7 +76,7 @@ export function Navbar() {
   }
 
   const adminLinks = [
-    { href: '/admin/students', label: t.common.language === 'es' ? 'Alumnos' : 'Students', icon: Users },
+    { href: '/admin/students', label: t.common.language === 'es' ? 'Estudiantes' : 'Students', icon: Users },
     { href: '/admin/challenges', label: t.common.challenges, icon: Code2 },
     { href: '/admin', label: t.common.courses, icon: LayoutDashboard },
   ];
@@ -189,7 +189,7 @@ export function Navbar() {
             <Link href="/dashboard" className="text-sm font-medium hover:text-primary transition-colors">{t.common.myLearning}</Link>
           )}
           
-          {/* Admin Tools Dropdown (Visible starting from 768px to avoid missing menu) */}
+          {/* Admin Tools Dropdown */}
           {user && isAdmin && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -204,7 +204,7 @@ export function Navbar() {
                 <DropdownMenuItem asChild className="p-3 cursor-pointer rounded-xl mx-1">
                   <Link href="/admin/students" className="flex items-center gap-2">
                     <Users className="h-4 w-4 text-amber-600" />
-                    Alumnos
+                    Estudiantes
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild className="p-3 cursor-pointer rounded-xl mx-1">

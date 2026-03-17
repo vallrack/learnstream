@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -78,7 +79,7 @@ export default function AdminStudentsPage() {
                   <div className="bg-primary/10 p-2.5 rounded-2xl">
                     <Users className="h-6 w-6 text-primary" />
                   </div>
-                  <h1 className="text-4xl font-headline font-bold">Gestión de Alumnos</h1>
+                  <h1 className="text-4xl font-headline font-bold">Gestión de Estudiantes</h1>
                 </div>
                 <p className="text-muted-foreground">Monitorea el progreso y activa/desactiva cuentas de estudiantes reales.</p>
               </div>
@@ -98,7 +99,7 @@ export default function AdminStudentsPage() {
               {isLoading ? (
                 <div className="p-20 flex flex-col items-center justify-center gap-4">
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                  <p className="text-muted-foreground font-medium">Cargando base de datos de alumnos...</p>
+                  <p className="text-muted-foreground font-medium">Cargando base de datos de estudiantes...</p>
                 </div>
               ) : (
                 <Table>
@@ -166,7 +167,7 @@ export default function AdminStudentsPage() {
                     ) : (
                       <TableRow>
                         <TableCell colSpan={5} className="h-40 text-center text-muted-foreground">
-                          No hay alumnos registrados que coincidan con la búsqueda.
+                          No hay estudiantes registrados que coincidan con la búsqueda.
                         </TableCell>
                       </TableRow>
                     )}
@@ -264,7 +265,7 @@ function StudentDetailView({ studentId, allCourses, onBack }: { studentId: strin
           <ShieldAlert className="h-8 w-8 shrink-0" />
           <div>
             <p className="font-bold text-lg">Cuenta Inactiva</p>
-            <p className="text-sm opacity-80">El acceso a los cursos para este estudiante ha sido revocado. El alumno verá un mensaje de suspensión al intentar ingresar.</p>
+            <p className="text-sm opacity-80">El acceso a los cursos para este estudiante ha sido revocado. El estudiante verá un mensaje de suspensión al intentar ingresar.</p>
           </div>
         </div>
       )}

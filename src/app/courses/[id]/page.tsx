@@ -159,7 +159,7 @@ export default function CourseDetailPage() {
                 </div>
                 <div className="flex-1 text-center md:text-left space-y-2">
                   <h2 className="text-2xl font-headline font-bold text-rose-900">Curso Finalizado</h2>
-                  <p className="text-rose-700">Este programa ha cerrado. Solo los alumnos **Premium** mantienen el acceso vitalicio.</p>
+                  <p className="text-rose-700">Este programa ha cerrado. Solo los estudiantes **Premium** mantienen el acceso vitalicio.</p>
                 </div>
                 <Button className="rounded-2xl h-14 px-8 bg-amber-500 hover:bg-amber-600 font-bold shadow-lg shadow-amber-200">
                   Mejorar a Premium

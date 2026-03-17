@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
@@ -136,7 +137,7 @@ function CertificateContent() {
 
           <section className="max-w-2xl text-center space-y-4 print:hidden">
             <h2 className="text-2xl font-headline font-bold">
-              {isPreview ? 'Así verán los alumnos su certificado' : '¡Felicidades por tu graduación!'}
+              {isPreview ? 'Así verán los estudiantes su certificado' : '¡Felicidades por tu graduación!'}
             </h2>
             <p className="text-muted-foreground">
               {isPreview 
