@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -15,11 +16,13 @@ import { doc, collection, query, orderBy } from 'firebase/firestore';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 export default function ProfilePage() {
   const { user, isUserLoading } = useUser();
   const db = useFirestore();
   const { toast } = useToast();
+  const router = useRouter();
   
   const profileRef = useMemoFirebase(() => {
     if (!db || !user?.uid) return null;
@@ -229,7 +232,9 @@ export default function ProfilePage() {
                   </CardContent>
                   {!profile?.isPremiumSubscriber && (
                     <CardFooter className="p-8 bg-slate-50">
-                       <Button className="w-full h-14 rounded-2xl text-lg font-bold bg-amber-500 hover:bg-amber-600 shadow-xl shadow-amber-200">Mejorar Plan Ahora</Button>
+                       <Link href="/checkout" className="w-full">
+                         <Button className="w-full h-14 rounded-2xl text-lg font-bold bg-amber-500 hover:bg-amber-600 shadow-xl shadow-amber-200">Mejorar Plan Ahora</Button>
+                       </Link>
                     </CardFooter>
                   )}
                 </Card>
