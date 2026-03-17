@@ -65,6 +65,20 @@ export default function ChallengeExecutionPage() {
     return userProgress?.map(p => p.courseId) || [];
   }, [userProgress]);
 
+  // Cursos para validar tecnologías inscritas
+  const allCoursesQuery = useMemoFirebase(() => {
+    if (!db) return null;
+    return collection(db, 'courses');
+  }, [db]);
+  const { data: allCourses } = useCollection(allCoursesQuery);
+
+  const enrolledTechnologies = useMemo(() => {
+    if (!allCourses || !enrolledCourseIds.length) return [];
+    return allCourses
+      .filter(c => enrolledCourseIds.includes(c.id))
+      .map(c => c.technology);
+  }, [allCourses, enrolledCourseIds]);
+
   const [code, setCode] = useState('');
   const [isEvaluating, setIsEvaluating] = useState(false);
   const [result, setResult] = useState<EvaluateChallengeOutput | null>(null);
@@ -75,18 +89,20 @@ export default function ChallengeExecutionPage() {
     }
   }, [challenge]);
 
-  // VERIFICACIÓN DE SEGURIDAD ESTRICTA:
-  // Un estudiante solo puede acceder si el reto pertenece a un curso en el que está inscrito.
-  // El administrador tiene acceso total.
+  // VERIFICACIÓN DE SEGURIDAD COHERENTE:
+  // El estudiante puede acceder si:
+  // 1. Es admin.
+  // 2. El reto está vinculado a uno de sus cursos inscritos.
+  // 3. El reto es público Y su tecnología coincide con uno de sus cursos.
   const canAccessChallenge = useMemo(() => {
     if (!challenge) return false;
     if (profile?.role === 'admin') return true;
     
-    // Si el reto no tiene curso asignado, se considera restringido para estudiantes (según requerimiento)
-    if (!challenge.courseId) return false;
+    const isLinkedToEnrolledCourse = challenge.courseId && enrolledCourseIds.includes(challenge.courseId);
+    const isPublicMatchingTech = challenge.visibility === 'public' && enrolledTechnologies.includes(challenge.technology);
     
-    return enrolledCourseIds.includes(challenge.courseId);
-  }, [challenge, profile, enrolledCourseIds]);
+    return isLinkedToEnrolledCourse || isPublicMatchingTech;
+  }, [challenge, profile, enrolledCourseIds, enrolledTechnologies]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Tab') {
@@ -176,7 +192,6 @@ export default function ChallengeExecutionPage() {
     return <div className="h-screen flex flex-col items-center justify-center gap-4"><h1 className="text-2xl font-bold">Reto no encontrado</h1><Button onClick={() => router.back()}>Volver</Button></div>;
   }
 
-  // Vista de acceso denegado si el reto no pertenece a sus cursos
   if (!canAccessChallenge) {
     return (
       <div className="h-screen flex flex-col bg-[#F8FAFC]">
@@ -187,7 +202,7 @@ export default function ChallengeExecutionPage() {
           </div>
           <h1 className="text-4xl font-headline font-bold mb-4">Acceso Restringido</h1>
           <p className="text-muted-foreground max-w-md mb-10 text-lg leading-relaxed">
-            Este desafío es exclusivo para estudiantes inscritos en el curso asociado. Por favor, inscríbete en el programa correspondiente para desbloquear esta actividad.
+            Este desafío requiere que estés inscrito en un curso de **{challenge.technology}** para poder participar.
           </p>
           <div className="flex gap-4">
             <Link href="/courses"><Button className="rounded-2xl h-14 px-8 font-bold gap-2"><BookOpen className="h-5 w-5" /> Explorar Cursos</Button></Link>
