@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Navbar } from '@/components/layout/Navbar';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { CheckCircle2, Loader2, ArrowRight, PartyPopper } from 'lucide-react';
+import { CheckCircle2, Loader2, ArrowRight, PartyPopper, AlertCircle } from 'lucide-react';
 import { useUser, useFirestore, updateDocumentNonBlocking } from '@/firebase';
 import { doc } from 'firebase/firestore';
 
@@ -23,31 +23,55 @@ function SuccessContent() {
   const db = useFirestore();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const sessionId = searchParams.get('session_id');
+  const ref_payco = searchParams.get('ref_payco');
   
-  const [isActivating, setIsActivating] = useState(true);
+  const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
+  const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
-    if (!isUserLoading && user?.uid && sessionId && db) {
-      // Activar la suscripción Premium en Firestore tras el pago exitoso
-      // Nota: En una app de producción esto se haría vía Webhook para mayor seguridad,
-      // pero aquí lo hacemos en el cliente para cumplir con la arquitectura solicitada.
-      updateDocumentNonBlocking(doc(db, 'users', user.uid), {
-        isPremiumSubscriber: true,
-        premiumUpdatedAt: new Date().toISOString(),
-        lastStripeSessionId: sessionId
-      });
-      
-      // Simular un tiempo de procesamiento visual
-      const timer = setTimeout(() => {
-        setIsActivating(false);
-      }, 2000);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [user, isUserLoading, sessionId, db]);
+    async function verifyPayment() {
+      if (!ref_payco) {
+        setStatus('error');
+        setErrorMessage('No se encontró una referencia de pago válida.');
+        return;
+      }
 
-  if (isUserLoading || isActivating) {
+      try {
+        // Consultar el estado de la transacción en ePayco
+        const response = await fetch(`https://secure.epayco.co/validation/v1/reference/${ref_payco}`);
+        const result = await response.json();
+
+        if (result.success && result.data.x_cod_response === 1) {
+          // Transacción Aceptada
+          if (user?.uid && db) {
+            updateDocumentNonBlocking(doc(db, 'users', user.uid), {
+              isPremiumSubscriber: true,
+              premiumUpdatedAt: new Date().toISOString(),
+              lastEpaycoRef: ref_payco
+            });
+            setStatus('success');
+          }
+        } else if (result.data.x_cod_response === 3) {
+          // Transacción Pendiente (común en Efecty/PSE)
+          setStatus('error');
+          setErrorMessage('Tu pago está pendiente de aprobación. Se activará cuando sea procesado.');
+        } else {
+          setStatus('error');
+          setErrorMessage('La transacción no fue aprobada. Por favor intenta de nuevo.');
+        }
+      } catch (error) {
+        console.error('Error verifying ePayco payment:', error);
+        setStatus('error');
+        setErrorMessage('Hubo un problema al verificar el pago con ePayco.');
+      }
+    }
+
+    if (!isUserLoading && user) {
+      verifyPayment();
+    }
+  }, [user, isUserLoading, ref_payco, db]);
+
+  if (status === 'loading') {
     return (
       <div className="min-h-screen bg-[#F8FAFC] flex flex-col">
         <Navbar />
@@ -55,8 +79,30 @@ function SuccessContent() {
           <div className="bg-primary/10 p-8 rounded-full mb-6">
             <Loader2 className="h-12 w-12 animate-spin text-primary" />
           </div>
-          <h1 className="text-3xl font-headline font-bold mb-2">Confirmando tu pago...</h1>
-          <p className="text-muted-foreground">Estamos configurando tu acceso Premium. Solo tardará unos segundos.</p>
+          <h1 className="text-3xl font-headline font-bold mb-2">Verificando tu pago...</h1>
+          <p className="text-muted-foreground">Estamos validando la transacción con ePayco. Solo tardará unos segundos.</p>
+        </main>
+      </div>
+    );
+  }
+
+  if (status === 'error') {
+    return (
+      <div className="min-h-screen bg-[#F8FAFC] flex flex-col">
+        <Navbar />
+        <main className="flex-1 flex items-center justify-center p-6">
+          <Card className="max-w-md w-full rounded-[3rem] border-none shadow-2xl overflow-hidden text-center">
+            <div className="bg-rose-600 p-12 text-white">
+              <AlertCircle className="h-12 w-12 mx-auto mb-4" />
+              <h2 className="text-3xl font-headline font-bold">Estado del Pago</h2>
+            </div>
+            <CardContent className="p-8 space-y-6">
+              <p className="text-slate-600">{errorMessage}</p>
+              <Button onClick={() => router.push('/dashboard')} className="w-full h-14 rounded-2xl text-lg font-bold gap-2">
+                Ir al Dashboard
+              </Button>
+            </CardContent>
+          </Card>
         </main>
       </div>
     );
@@ -79,7 +125,7 @@ function SuccessContent() {
               <PartyPopper className="h-5 w-5" />
               <span>Cuenta Activada</span>
             </div>
-            <p className="text-slate-600">Ahora tienes acceso ilimitado a todos los cursos, evaluaciones por IA y certificados. ¡Es hora de empezar a aprender!</p>
+            <p className="text-slate-600">Tu suscripción ha sido activada correctamente a través de ePayco. ¡Es hora de empezar a aprender!</p>
             <Button onClick={() => router.push('/dashboard')} className="w-full h-14 rounded-2xl text-lg font-bold gap-2 shadow-xl shadow-primary/20">
               Ir a mi Dashboard
               <ArrowRight className="h-5 w-5" />

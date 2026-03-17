@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { 
   ShieldCheck, 
-  Lock, 
   Loader2, 
   ArrowRight,
   Zap,
@@ -18,8 +17,8 @@ import {
 } from 'lucide-react';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
-import { createCheckoutSession } from '@/app/actions/stripe';
 import { useToast } from '@/hooks/use-toast';
+import Script from 'next/image'; // Usaremos Script de next/script en su lugar
 
 export default function CheckoutPage() {
   const { user, isUserLoading } = useUser();
@@ -44,24 +43,58 @@ export default function CheckoutPage() {
     }
   }, [user, isUserLoading, router, profile]);
 
-  const handleStartPayment = async () => {
+  const handleStartPayment = () => {
     if (!user?.uid || !user.email) return;
     
-    setIsProcessing(true);
-    try {
-      const { url } = await createCheckoutSession(user.uid, user.email);
-      if (url) {
-        // Redirigir al Checkout seguro de Stripe
-        window.location.href = url;
-      }
-    } catch (error: any) {
+    const publicKey = process.env.NEXT_PUBLIC_EPAYCO_PUBLIC_KEY;
+    
+    if (!publicKey || publicKey === 'tu_public_key_aqui') {
       toast({
         variant: "destructive",
-        title: "Error de conexión",
-        description: error.message || "Hubo un problema al conectar con la pasarela de pagos.",
+        title: "Configuración incompleta",
+        description: "Falta la llave pública de ePayco en el archivo .env",
       });
-      setIsProcessing(false);
+      return;
     }
+
+    setIsProcessing(true);
+
+    // Cargar dinámicamente el script de ePayco
+    const script = document.createElement('script');
+    script.src = 'https://checkout.epayco.co/checkout.js';
+    script.async = true;
+    script.onload = () => {
+      const handler = (window as any).ePayco.checkout.configure({
+        key: publicKey,
+        test: true // Cambiar a false cuando pases a producción
+      });
+
+      const data = {
+        name: "LearnStream Premium - Acceso Ilimitado",
+        description: "Acceso de por vida a todos los cursos y desafíos de IA",
+        invoice: `LS-${Date.now()}`,
+        currency: "cop",
+        amount: "120000", // Valor en pesos colombianos (ej: 120.000)
+        tax_base: "0",
+        tax: "0",
+        country: "co",
+        lang: "es",
+        external: "false",
+        confirmation: `${window.location.origin}/api/epayco-webhook`, // Opcional: para validación servidor
+        response: `${window.location.origin}/checkout/success`,
+        name_billing: user.displayName || "Estudiante",
+        address_billing: "Calle Falsa 123",
+        type_doc_billing: "cc",
+        mobile_phone_billing: "3000000000",
+        number_doc_billing: "123456789",
+        extra1: user.uid, // Guardamos el ID del usuario para la activación
+      };
+
+      handler.open(data);
+      setIsProcessing(false);
+    };
+    
+    document.body.appendChild(script);
   };
 
   if (isUserLoading) return <div className="h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
@@ -72,16 +105,15 @@ export default function CheckoutPage() {
       
       <main className="max-w-6xl mx-auto px-6 py-12">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
-          {/* Columna Izquierda: Información del Plan */}
           <div className="space-y-8">
             <div>
-              <h1 className="text-4xl font-headline font-bold mb-4">Potencia tu carrera hoy</h1>
-              <p className="text-lg text-muted-foreground">Estás a un paso de desbloquear todas las herramientas de nivel profesional.</p>
+              <h1 className="text-4xl font-headline font-bold mb-4 text-slate-900">Potencia tu carrera en Colombia</h1>
+              <p className="text-lg text-muted-foreground">Desbloquea herramientas profesionales con medios de pago locales.</p>
             </div>
 
             <div className="space-y-4">
               {[
-                { icon: Zap, title: "Acceso Ilimitado", desc: "Todos los cursos actuales y futuros de la plataforma." },
+                { icon: Zap, title: "Pagos con Nequi y Daviplata", desc: "Usa tus billeteras digitales favoritas para activar tu cuenta." },
                 { icon: Star, title: "Evaluación por IA", desc: "Feedback detallado e insignias de maestría en tus retos." },
                 { icon: Award, title: "Certificados de Valor", desc: "Diplomas verificados listos para compartir en LinkedIn." }
               ].map((feat, i) => (
@@ -100,13 +132,12 @@ export default function CheckoutPage() {
             <div className="p-6 bg-slate-900 rounded-[2rem] text-white">
               <div className="flex justify-between items-center mb-4">
                 <span className="text-slate-400">Inversión total:</span>
-                <span className="text-3xl font-bold">$29.99<span className="text-sm font-normal opacity-60"> USD</span></span>
+                <span className="text-3xl font-bold">$120.000<span className="text-sm font-normal opacity-60"> COP</span></span>
               </div>
               <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Un solo pago para acceso ilimitado</p>
             </div>
           </div>
 
-          {/* Columna Derecha: Resumen y Botón Stripe */}
           <Card className="rounded-[2.5rem] border-none shadow-2xl overflow-hidden bg-white">
             <CardHeader className="bg-slate-50 p-8 border-b">
               <CardTitle className="text-xl flex items-center gap-2">
@@ -117,16 +148,12 @@ export default function CheckoutPage() {
             <CardContent className="p-8 space-y-8">
               <div className="space-y-4">
                 <div className="flex justify-between items-center py-2 border-b border-dashed">
-                  <span className="text-slate-600 font-medium">Plan Premium Anual</span>
-                  <span className="font-bold">$29.99</span>
-                </div>
-                <div className="flex justify-between items-center py-2 text-emerald-600 font-bold">
-                  <span>Descuento Especial</span>
-                  <span>-$0.00</span>
+                  <span className="text-slate-600 font-medium">Plan Premium Vitalicio</span>
+                  <span className="font-bold">$120.000</span>
                 </div>
                 <div className="flex justify-between items-center pt-4">
                   <span className="text-xl font-headline font-bold">Total a pagar</span>
-                  <span className="text-3xl font-headline font-bold">$29.99</span>
+                  <span className="text-3xl font-headline font-bold">$120.000</span>
                 </div>
               </div>
 
@@ -134,16 +161,16 @@ export default function CheckoutPage() {
                 <Button 
                   onClick={handleStartPayment} 
                   disabled={isProcessing}
-                  className="w-full h-16 rounded-2xl text-xl font-bold shadow-xl shadow-primary/20 transition-all hover:scale-[1.02] active:scale-[0.98] bg-primary"
+                  className="w-full h-16 rounded-2xl text-xl font-bold shadow-xl shadow-primary/20 transition-all hover:scale-[1.02] bg-primary"
                 >
                   {isProcessing ? (
                     <>
                       <Loader2 className="h-6 w-6 animate-spin mr-2" />
-                      Conectando...
+                      Cargando ePayco...
                     </>
                   ) : (
                     <>
-                      Pagar con Stripe
+                      Pagar con ePayco
                       <ArrowRight className="h-5 w-5 ml-2" />
                     </>
                   )}
@@ -151,18 +178,19 @@ export default function CheckoutPage() {
                 
                 <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
                   <ShieldCheck className="h-4 w-4 text-emerald-600" />
-                  Transacción protegida por Stripe SSL
+                  Transacción procesada de forma segura
                 </div>
               </div>
             </CardContent>
-            <CardFooter className="bg-slate-50/50 p-6 flex flex-col gap-2">
-              <div className="flex justify-center gap-4 opacity-40 grayscale h-6 mb-2">
-                <img src="https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg" alt="Visa" className="h-full" />
-                <img src="https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg" alt="Mastercard" className="h-full" />
-                <img src="https://upload.wikimedia.org/wikipedia/commons/b/b5/PayPal.svg" alt="PayPal" className="h-full" />
+            <CardFooter className="bg-slate-50/50 p-6 flex flex-col gap-4">
+              <div className="flex flex-wrap justify-center gap-4 opacity-60 grayscale h-6">
+                <img src="https://multimedia.epayco.co/epayco-landing/v2/pse.png" alt="PSE" className="h-full" />
+                <img src="https://multimedia.epayco.co/epayco-landing/v2/nequi.png" alt="Nequi" className="h-full" />
+                <img src="https://multimedia.epayco.co/epayco-landing/v2/daviplata.png" alt="Daviplata" className="h-full" />
+                <img src="https://multimedia.epayco.co/epayco-landing/v2/efecty.png" alt="Efecty" className="h-full" />
               </div>
               <p className="text-[10px] text-center text-muted-foreground leading-relaxed px-4">
-                Al pagar, aceptas nuestros <span className="text-primary cursor-pointer hover:underline">Términos de Servicio</span>. Tu acceso Premium se activará inmediatamente después de la confirmación del banco.
+                Al pagar, aceptas nuestros <span className="text-primary cursor-pointer hover:underline">Términos de Servicio</span>. Tu acceso Premium se activará después de que el sistema reciba la confirmación de pago.
               </p>
             </CardFooter>
           </Card>
