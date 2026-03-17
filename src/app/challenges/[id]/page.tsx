@@ -105,6 +105,12 @@ export default function ChallengeExecutionPage() {
     return isLinkedToEnrolledCourse || isPublicMatchingTech;
   }, [challenge, profile, enrolledCourseIds, enrolledTechnologies]);
 
+  // BLOQUEO POR SUSCRIPCIÓN PREMIUM
+  const isPremiumLocked = useMemo(() => {
+    if (!challenge || profile?.role === 'admin') return false;
+    return !challenge.isFree && !profile?.isPremiumSubscriber;
+  }, [challenge, profile]);
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Tab') {
       e.preventDefault();
@@ -124,24 +130,14 @@ export default function ChallengeExecutionPage() {
     e.preventDefault();
     toast({
       variant: "destructive",
-      title: "Acción no permitida",
+      title: "Acceso denegado",
       description: "Por integridad del aprendizaje, debes escribir el código manualmente.",
     });
   };
 
   const handleSubmit = async () => {
-    if (!challenge || !db || !canAccessChallenge) return;
+    if (!challenge || !db || !canAccessChallenge || isPremiumLocked) return;
     
-    const isPremiumAndNoSub = !challenge.isFree && !profile?.isPremiumSubscriber;
-    if (isPremiumAndNoSub) {
-      toast({
-        variant: "destructive",
-        title: "Acceso denegado",
-        description: "Este es un reto premium. Suscríbete para continuar.",
-      });
-      return;
-    }
-
     setIsEvaluating(true);
     setResult(null);
     try {
@@ -193,6 +189,7 @@ export default function ChallengeExecutionPage() {
     return <div className="h-screen flex flex-col items-center justify-center gap-4"><h1 className="text-2xl font-bold">Reto no encontrado</h1><Button onClick={() => router.back()}>Volver</Button></div>;
   }
 
+  // GATE 1: Inscripción al curso
   if (!canAccessChallenge) {
     return (
       <div className="h-screen flex flex-col bg-[#F8FAFC]">
@@ -207,6 +204,28 @@ export default function ChallengeExecutionPage() {
           </p>
           <div className="flex gap-4">
             <Link href="/courses"><Button className="rounded-2xl h-14 px-8 font-bold gap-2"><BookOpen className="h-5 w-5" /> Explorar Cursos</Button></Link>
+            <Button variant="ghost" onClick={() => router.back()} className="rounded-2xl h-14 px-8 font-bold">Volver</Button>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  // GATE 2: Suscripción Premium
+  if (isPremiumLocked) {
+    return (
+      <div className="h-screen flex flex-col bg-[#F8FAFC]">
+        <Navbar />
+        <main className="flex-1 flex flex-col items-center justify-center p-6 text-center">
+          <div className="w-24 h-24 bg-amber-100 rounded-[2.5rem] flex items-center justify-center mb-8 shadow-xl shadow-amber-500/10">
+            <Lock className="h-10 w-10 text-amber-600" />
+          </div>
+          <h1 className="text-4xl font-headline font-bold mb-4">Contenido Premium</h1>
+          <p className="text-muted-foreground max-w-md mb-10 text-lg leading-relaxed">
+            Este desafío es exclusivo para miembros **Premium**. Desbloquea evaluaciones por IA ilimitadas e insignias de maestría.
+          </p>
+          <div className="flex gap-4">
+            <Link href="/checkout"><Button className="rounded-2xl h-14 px-8 font-bold bg-amber-500 hover:bg-amber-600 gap-2"><Crown className="h-5 w-5" /> Mejorar a Premium</Button></Link>
             <Button variant="ghost" onClick={() => router.back()} className="rounded-2xl h-14 px-8 font-bold">Volver</Button>
           </div>
         </main>
