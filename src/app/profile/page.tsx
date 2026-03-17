@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -9,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
 import { User, CreditCard, Shield, Crown, CheckCircle, Loader2, Save, UserCircle, ShieldAlert, Code2, Award, Terminal, Star, ExternalLink, Share2, Copy } from 'lucide-react';
 import { useUser, useFirestore, useDoc, useMemoFirebase, updateDocumentNonBlocking, useCollection } from '@/firebase';
 import { doc, collection, query, orderBy } from 'firebase/firestore';
