@@ -16,9 +16,27 @@
         "level": { "type": "number", "default": 1 },
         "createdAt": { "type": "string", "format": "date-time" },
         "isPremiumSubscriber": { "type": "boolean" },
-        "isActive": { "type": "boolean", "default": true }
+        "isActive": { "type": "boolean", "default": true },
+        "instructorStatus": { "type": "string", "enum": ["none", "pending", "active", "rejected"], "default": "none" },
+        "revenueSharePercentage": { "type": "number", "default": 70, "description": "Porcentaje de ganancia del instructor por cada venta." },
+        "totalEarnings": { "type": "number", "default": 0 }
       },
       "required": ["id", "displayName", "email", "createdAt"]
+    },
+    "InstructorApplication": {
+      "title": "InstructorApplication",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "userName": { "type": "string" },
+        "bio": { "type": "string" },
+        "specialty": { "type": "string" },
+        "paymentReference": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
     },
     "Course": {
       "title": "Course",
@@ -31,6 +49,7 @@
         "imageUrl": { "type": "string" },
         "instructorId": { "type": "string" },
         "isFree": { "type": "boolean" },
+        "price": { "type": "number", "default": 0 },
         "closingDate": { "type": "string", "format": "date-time" },
         "isActive": { "type": "boolean", "default": true }
       },
@@ -66,17 +85,6 @@
         "instructorId": { "type": "string" },
         "isFree": { "type": "boolean", "default": true }
       }
-    },
-    "ChallengeSubmission": {
-      "title": "ChallengeSubmission",
-      "type": "object",
-      "properties": {
-        "id": { "type": "string" },
-        "challengeId": { "type": "string" },
-        "score": { "type": "number" },
-        "passed": { "type": "boolean" },
-        "submittedAt": { "type": "string", "format": "date-time" }
-      }
     }
   },
   "auth": {
@@ -89,16 +97,12 @@
         "definition": { "entityName": "UserProfile", "schema": { "$ref": "#/backend/entities/UserProfile" } }
       },
       {
+        "path": "/instructor_applications/{appId}",
+        "definition": { "entityName": "InstructorApplication", "schema": { "$ref": "#/backend/entities/InstructorApplication" } }
+      },
+      {
         "path": "/courses/{courseId}",
         "definition": { "entityName": "Course", "schema": { "$ref": "#/backend/entities/Course" } }
-      },
-      {
-        "path": "/promotions/{promoId}",
-        "definition": { "entityName": "Promotion", "schema": { "$ref": "#/backend/entities/Promotion" } }
-      },
-      {
-        "path": "/coding_challenges/{challengeId}",
-        "definition": { "entityName": "CodingChallenge", "schema": { "$ref": "#/backend/entities/CodingChallenge" } }
       }
     ]
   }

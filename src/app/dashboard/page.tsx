@@ -6,9 +6,26 @@ import { Progress } from '@/components/ui/progress';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { BookOpen, Trophy, Clock, PlayCircle, Loader2, Sparkles, Code2, BarChart3, Star, Zap, ChevronRight, Award, Medal } from 'lucide-react';
+import { 
+  BookOpen, 
+  Trophy, 
+  Clock, 
+  PlayCircle, 
+  Loader2, 
+  Sparkles, 
+  Code2, 
+  BarChart3, 
+  Star, 
+  Zap, 
+  ChevronRight, 
+  Award, 
+  Medal,
+  Wallet,
+  Users,
+  TrendingUp
+} from 'lucide-react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
-import { collection, query, orderBy, limit, doc } from 'firebase/firestore';
+import { collection, query, orderBy, limit, doc, where } from 'firebase/firestore';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useState, useEffect, useMemo } from 'react';
@@ -29,6 +46,8 @@ export default function DashboardPage() {
   }, [db, user?.uid]);
   const { data: profile } = useDoc(profileRef);
 
+  const isInstructor = profile?.role === 'instructor';
+
   const progressQuery = useMemoFirebase(() => {
     if (!db || !user?.uid) return null;
     return collection(db, 'users', user.uid, 'courseProgress');
@@ -40,6 +59,14 @@ export default function DashboardPage() {
     return collection(db, 'courses');
   }, [db]);
   const { data: allCourses, isLoading: isCoursesLoading } = useCollection(coursesQuery);
+
+  // Consulta de estudiantes para el instructor
+  const instructorStudentsQuery = useMemoFirebase(() => {
+    if (!db || !isInstructor || !user?.uid) return null;
+    // Esto es una simplificación: en una app real usaríamos una subcolección de ventas o inscripciones
+    return query(collection(db, 'courses'), where('instructorId', '==', user.uid));
+  }, [db, isInstructor, user?.uid]);
+  const { data: myCourses } = useCollection(instructorStudentsQuery);
 
   const submissionsQuery = useMemoFirebase(() => {
     if (!db || !user?.uid) return null;
@@ -63,7 +90,7 @@ export default function DashboardPage() {
 
   const activeCourse = enrolledCourses.find(c => c.status !== 'completed');
 
-  // Gamificación mejorada con insignias
+  // Gamificación
   const completedCount = enrolledCourses.filter(c => c.status === 'completed').length;
   const passedChallenges = submissions?.filter(s => s.passed).length || 0;
   const xp = (completedCount * 500) + (passedChallenges * 100) + ((achievements?.length || 0) * 250);
@@ -116,6 +143,46 @@ export default function DashboardPage() {
             </div>
           </div>
         </header>
+
+        {/* Sección de Instructor (Solo si tiene el rol) */}
+        {isInstructor && (
+          <section className="mb-12 animate-in fade-in slide-in-from-top-4 duration-700">
+            <div className="flex items-center gap-2 mb-6">
+              <div className="bg-amber-100 p-2 rounded-xl"><Wallet className="h-5 w-5 text-amber-600" /></div>
+              <h2 className="text-2xl font-headline font-bold">Resumen de Instructor</h2>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <Card className="rounded-[2rem] border-none shadow-sm bg-slate-900 text-white p-8">
+                <div className="flex justify-between items-start mb-4">
+                  <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Ganancias Totales</p>
+                  <TrendingUp className="h-5 w-5 text-emerald-400" />
+                </div>
+                <h3 className="text-4xl font-headline font-bold mb-2">${(profile.totalEarnings || 0).toLocaleString()} <span className="text-sm opacity-50 font-normal">COP</span></h3>
+                <p className="text-xs text-slate-500">Tasa de comisión activa: {profile.revenueSharePercentage || 70}%</p>
+              </Card>
+              
+              <Card className="rounded-[2rem] border-none shadow-sm bg-white p-8">
+                <div className="flex justify-between items-start mb-4">
+                  <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Cursos Publicados</p>
+                  <BookOpen className="h-5 w-5 text-primary" />
+                </div>
+                <h3 className="text-4xl font-headline font-bold text-slate-900">{myCourses?.length || 0}</h3>
+                <Link href="/admin">
+                  <Button variant="link" className="p-0 h-auto text-xs font-bold text-primary mt-2">Gestionar Contenido →</Button>
+                </Link>
+              </Card>
+
+              <Card className="rounded-[2rem] border-none shadow-sm bg-white p-8">
+                <div className="flex justify-between items-start mb-4">
+                  <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Impacto Social</p>
+                  <Users className="h-5 w-5 text-blue-500" />
+                </div>
+                <h3 className="text-4xl font-headline font-bold text-slate-900">+50</h3>
+                <p className="text-xs text-muted-foreground mt-2">Estudiantes aprendiendo de ti</p>
+              </Card>
+            </div>
+          </section>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 mb-12">
           <div className="lg:col-span-3 space-y-8">

@@ -20,7 +20,8 @@ import {
   Settings,
   ChevronDown,
   Tag,
-  GraduationCap
+  GraduationCap,
+  FileText
 } from 'lucide-react';
 import { useUser, useAuth, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { signOut } from 'firebase/auth';
@@ -82,6 +83,7 @@ export function Navbar() {
   const adminLinks = [
     { href: '/admin/challenges', label: 'Desafíos', icon: Code2, roles: ['admin', 'instructor'] },
     { href: '/admin', label: 'Catálogo Cursos', icon: LayoutDashboard, roles: ['admin', 'instructor'] },
+    { href: '/admin/applications', label: 'Solicitudes Instructor', icon: FileText, roles: ['admin'] },
     { href: '/admin/students', label: 'Usuarios y Roles', icon: Users, roles: ['admin'] },
     { href: '/admin/promotions', label: 'Promociones', icon: Tag, roles: ['admin'] },
   ];
@@ -128,6 +130,24 @@ export function Navbar() {
                   ))}
                 </div>
               </section>
+
+              {!hasManagementAccess && user && (
+                <section className="space-y-3">
+                  <p className="text-[10px] font-bold text-primary uppercase tracking-widest px-2">¿Eres experto?</p>
+                  <Link 
+                    href="/instructor/apply" 
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="flex items-center justify-between p-3 rounded-2xl bg-primary/5 hover:bg-primary/10 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-xl bg-primary text-white">
+                        <GraduationCap className="h-4 w-4" />
+                      </div>
+                      <span className="font-bold text-sm">Enseña en LearnStream</span>
+                    </div>
+                  </Link>
+                </section>
+              )}
 
               {hasManagementAccess && (
                 <section className="space-y-3">
@@ -194,6 +214,12 @@ export function Navbar() {
             <Link href="/dashboard" className="text-sm font-medium hover:text-primary transition-colors">{t.common.myLearning}</Link>
           )}
           
+          {user && !hasManagementAccess && (
+            <Link href="/instructor/apply" className="text-xs font-bold text-primary bg-primary/5 px-3 py-1.5 rounded-full hover:bg-primary/10 transition-colors">
+              Enseña en LearnStream
+            </Link>
+          )}
+
           {user && hasManagementAccess && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
