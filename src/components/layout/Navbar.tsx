@@ -131,7 +131,8 @@ export function Navbar() {
                 </div>
               </section>
 
-              {!hasManagementAccess && user && (
+              {/* Mostrar siempre para usuarios que no son instructores */}
+              {!isInstructor && user && (
                 <section className="space-y-3">
                   <p className="text-[10px] font-bold text-primary uppercase tracking-widest px-2">¿Eres experto?</p>
                   <Link 
@@ -214,7 +215,7 @@ export function Navbar() {
             <Link href="/dashboard" className="text-sm font-medium hover:text-primary transition-colors">{t.common.myLearning}</Link>
           )}
           
-          {user && !hasManagementAccess && (
+          {user && !isInstructor && (
             <Link href="/instructor/apply" className="text-xs font-bold text-primary bg-primary/5 px-3 py-1.5 rounded-full hover:bg-primary/10 transition-colors">
               Enseña en LearnStream
             </Link>
@@ -281,7 +282,7 @@ export function Navbar() {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="rounded-full overflow-hidden border h-9 w-9">
                 {profile?.profileImageUrl ? (
-                  <img src={profile.profileImageUrl} alt={displayName} className="h-full w-full object-cover" />
+                  <img src={profile.profileImageUrl} alt={profile?.displayName || 'Usuario'} className="h-full w-full object-cover" />
                 ) : (
                   <User className="h-5 w-5" />
                 )}

@@ -51,7 +51,8 @@ export default function InstructorApplyPage() {
     if (!isUserLoading && !user) {
       router.push('/login');
     }
-    if (profile?.role === 'instructor' || profile?.role === 'admin') {
+    // Permitimos que el Admin vea la página para configuración/pruebas
+    if (profile?.role === 'instructor') {
       router.push('/dashboard');
     }
   }, [user, isUserLoading, router, profile]);
