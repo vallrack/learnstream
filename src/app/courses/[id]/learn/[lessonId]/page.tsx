@@ -23,12 +23,16 @@ import {
   Lock,
   Award,
   Code2,
-  ArrowRight
+  ArrowRight,
+  HelpCircle,
+  AlertCircle,
+  RefreshCcw,
+  CheckCircle2
 } from 'lucide-react';
 import Link from 'next/link';
 import { useDoc, useCollection, useFirestore, useMemoFirebase, useUser, setDocumentNonBlocking } from '@/firebase';
 import { doc, collection, query, orderBy, serverTimestamp } from 'firebase/firestore';
-import { useState, Suspense } from 'react';
+import { useState, Suspense, useEffect } from 'react';
 import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
@@ -37,6 +41,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useToast } from '@/hooks/use-toast';
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
 
 export default function LessonPlayerPage() {
   return (
@@ -187,7 +194,7 @@ function LessonPlayerContent() {
                 <Button variant="ghost" size="icon"><MoreVertical className="h-4 w-4" /></Button>
               </div>
 
-              {/* Lesson Content - Challenge or Video */}
+              {/* Lesson Content - Challenge, Quiz or Video */}
               {currentLesson.type === 'challenge' ? (
                 <div className="flex flex-col items-center justify-center py-16 px-6 bg-white rounded-[3rem] border shadow-sm text-center space-y-8 animate-in fade-in zoom-in duration-500">
                   <div className="bg-primary/10 p-8 rounded-[2rem] shadow-inner">
@@ -209,6 +216,8 @@ function LessonPlayerContent() {
                   </Link>
                   <p className="text-[10px] text-muted-foreground italic font-medium">Se requiere abrir el editor de código interactivo para continuar.</p>
                 </div>
+              ) : currentLesson.type === 'quiz' ? (
+                <QuizPlayer lesson={currentLesson} onComplete={handleMarkAsCompleted} />
               ) : (
                 <>
                   {/* Video Player */}
@@ -269,7 +278,7 @@ function LessonPlayerContent() {
                   </Button>
                 </Link>
                 
-                {currentLesson.type !== 'challenge' && (
+                {currentLesson.type !== 'challenge' && currentLesson.type !== 'quiz' && (
                   <Button 
                     className="h-12 px-8 rounded-xl bg-emerald-600 hover:bg-emerald-700 gap-2 font-bold shadow-lg shadow-emerald-100"
                     onClick={handleMarkAsCompleted}
@@ -289,6 +298,136 @@ function LessonPlayerContent() {
         </aside>
       </div>
     </div>
+  );
+}
+
+function QuizPlayer({ lesson, onComplete }: { lesson: any, onComplete: () => void }) {
+  const [currentStep, setCurrentStep] = useState(0);
+  const [answers, setAnswers] = useState<number[]>([]);
+  const [showResult, setShowResult] = useState(false);
+  const [score, setScore] = useState(0);
+
+  const questions = lesson.questions || [];
+
+  const handleSelect = (optionIndex: number) => {
+    const newAnswers = [...answers];
+    newAnswers[currentStep] = optionIndex;
+    setAnswers(newAnswers);
+  };
+
+  const nextStep = () => {
+    if (currentStep < questions.length - 1) {
+      setCurrentStep(currentStep + 1);
+    } else {
+      calculateScore();
+    }
+  };
+
+  const calculateScore = () => {
+    let correct = 0;
+    questions.forEach((q: any, i: number) => {
+      if (answers[i] === q.correctAnswer) correct++;
+    });
+    const finalScore = (correct / questions.length) * 5;
+    setScore(finalScore);
+    setShowResult(true);
+    if (finalScore >= 3) onComplete();
+  };
+
+  const resetQuiz = () => {
+    setCurrentStep(0);
+    setAnswers([]);
+    setShowResult(false);
+    setScore(0);
+  };
+
+  if (questions.length === 0) return (
+    <div className="p-12 text-center bg-white rounded-[2rem] border">
+      <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+      <p className="text-muted-foreground font-medium">Este cuestionario aún no tiene preguntas configuradas.</p>
+    </div>
+  );
+
+  if (showResult) {
+    const passed = score >= 3;
+    return (
+      <Card className="rounded-[3rem] border-none shadow-xl overflow-hidden animate-in fade-in zoom-in duration-500">
+        <CardHeader className={`p-12 text-center text-white ${passed ? 'bg-emerald-600' : 'bg-rose-600'}`}>
+          <div className="bg-white/20 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 backdrop-blur-md">
+            {passed ? <CheckCircle2 className="h-10 w-10" /> : <AlertCircle className="h-10 w-10" />}
+          </div>
+          <CardTitle className="text-4xl font-headline font-bold mb-2">
+            {passed ? '¡Prueba Superada!' : 'Puedes mejorar'}
+          </CardTitle>
+          <p className="opacity-80 text-lg">Tu calificación final ha sido:</p>
+          <div className="text-6xl font-bold mt-4">{score.toFixed(1)}<span className="text-xl opacity-60">/5.0</span></div>
+        </CardHeader>
+        <CardContent className="p-12 text-center space-y-8 bg-white">
+          <div className="space-y-4">
+            <p className="text-slate-600 text-lg">
+              {passed 
+                ? "Has demostrado un gran dominio de la teoría de este módulo. Sigue así para completar tu certificación." 
+                : "Te recomendamos repasar el contenido de la lección y volver a intentar el cuestionario."}
+            </p>
+          </div>
+          <div className="flex flex-col sm:flex-row justify-center gap-4 pt-4">
+            {!passed && (
+              <Button size="lg" onClick={resetQuiz} className="h-14 px-8 rounded-2xl gap-2 font-bold bg-slate-900">
+                <RefreshCcw className="h-5 w-5" /> Reintentar Prueba
+              </Button>
+            )}
+            <Button variant="outline" size="lg" onClick={resetQuiz} className="h-14 px-8 rounded-2xl gap-2 font-bold">
+              Ver Mis Respuestas
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const currentQ = questions[currentStep];
+
+  return (
+    <Card className="rounded-[3rem] border-none shadow-sm bg-white overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <CardHeader className="p-8 md:p-12 border-b bg-slate-50/50">
+        <div className="flex items-center justify-between mb-6">
+          <Badge variant="secondary" className="px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest bg-primary/5 text-primary">Cuestionario Teórico</Badge>
+          <span className="text-sm font-bold text-muted-foreground">Pregunta {currentStep + 1} de {questions.length}</span>
+        </div>
+        <CardTitle className="text-2xl md:text-3xl font-headline font-bold leading-tight text-slate-900">
+          {currentQ.question}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="p-8 md:p-12">
+        <RadioGroup value={answers[currentStep]?.toString()} onValueChange={(v) => handleSelect(parseInt(v))} className="grid gap-4">
+          {currentQ.options.map((option: string, i: number) => (
+            <div 
+              key={i} 
+              className={`relative flex items-center gap-4 p-6 rounded-[1.5rem] border-2 transition-all cursor-pointer group ${answers[currentStep] === i ? 'border-primary bg-primary/5 shadow-md' : 'border-slate-100 hover:border-slate-200'}`}
+              onClick={() => handleSelect(i)}
+            >
+              <RadioGroupItem value={i.toString()} id={`opt-${i}`} className="shrink-0" />
+              <Label htmlFor={`opt-${i}`} className="flex-1 text-lg font-medium cursor-pointer leading-relaxed">{option}</Label>
+              {answers[currentStep] === i && <CheckCircle2 className="h-6 w-6 text-primary" />}
+            </div>
+          ))}
+        </RadioGroup>
+      </CardContent>
+      <CardFooter className="p-8 md:p-12 bg-slate-50/50 border-t flex items-center justify-between">
+        <div className="w-full max-w-md">
+          <Progress value={((currentStep + 1) / questions.length) * 100} className="h-2 bg-slate-200" />
+        </div>
+        <Button 
+          onClick={nextStep} 
+          disabled={answers[currentStep] === undefined} 
+          size="lg"
+          className="h-14 px-10 rounded-2xl font-bold gap-2 shadow-xl shadow-primary/20"
+        >
+          {currentStep === questions.length - 1 ? 'Finalizar Prueba' : 'Siguiente Pregunta'}
+          <ArrowRight className="h-5 w-5" />
+        </Button>
+      </CardFooter>
+    </Card>
   );
 }
 
@@ -512,7 +651,9 @@ function ModuleInSidebar({ module, courseId, activeLessonId, index }: { module: 
               className={`block px-4 py-3 text-sm transition-colors hover:bg-muted/20 ${isActive ? 'bg-primary/5 text-primary border-l-2 border-primary font-medium' : ''}`}
             >
               <div className="flex items-center gap-3">
-                {lesson.type === 'challenge' ? <Code2 className={`h-4 w-4 ${isActive ? 'text-primary' : 'text-muted-foreground/30'}`} /> : <CheckCircle className={`h-4 w-4 ${isActive ? 'text-primary' : 'text-muted-foreground/30'}`} />}
+                {lesson.type === 'challenge' ? <Code2 className={`h-4 w-4 ${isActive ? 'text-primary' : 'text-muted-foreground/30'}`} /> : 
+                 lesson.type === 'quiz' ? <HelpCircle className={`h-4 w-4 ${isActive ? 'text-primary' : 'text-muted-foreground/30'}`} /> :
+                 <CheckCircle className={`h-4 w-4 ${isActive ? 'text-primary' : 'text-muted-foreground/30'}`} />}
                 <span className="truncate">{lessonTitle}</span>
               </div>
             </Link>

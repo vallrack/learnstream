@@ -19,7 +19,9 @@ import {
   FileText,
   Code2,
   AlertTriangle,
-  PlayCircle
+  PlayCircle,
+  HelpCircle,
+  CheckCircle2
 } from 'lucide-react';
 import Link from 'next/link';
 import { 
@@ -51,6 +53,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
 
 export default function CourseContentAdminPage() {
   const params = useParams();
@@ -239,7 +242,7 @@ function LessonManager({ course, moduleId, isAdmin }: { course: any, moduleId: s
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingLesson, setEditingLesson] = useState<any>(null);
 
-  const [type, setType] = useState<'video' | 'challenge'>('video');
+  const [type, setType] = useState<'video' | 'challenge' | 'quiz'>('video');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [videoUrl, setVideoUrl] = useState('');
@@ -247,6 +250,9 @@ function LessonManager({ course, moduleId, isAdmin }: { course: any, moduleId: s
   const [duration, setDuration] = useState('10');
   const [order, setOrder] = useState('0');
   const [isPremium, setIsPremium] = useState(false);
+
+  // Quiz state
+  const [questions, setQuestions] = useState<any[]>([]);
 
   // Cargar desafíos para el selector (solo si coinciden con la tecnología del curso)
   const challengesQuery = useMemoFirebase(() => {
@@ -283,13 +289,15 @@ function LessonManager({ course, moduleId, isAdmin }: { course: any, moduleId: s
 
     if (type === 'video') {
       lessonData.videoUrl = videoUrl;
-    } else {
+    } else if (type === 'challenge') {
       lessonData.challengeId = challengeId;
       const challenge = compatibleChallenges.find(c => c.id === challengeId);
       if (challenge) {
         lessonData.title = challenge.title;
         lessonData.description = challenge.description;
       }
+    } else if (type === 'quiz') {
+      lessonData.questions = questions;
     }
 
     if (editingLesson) {
@@ -314,6 +322,7 @@ function LessonManager({ course, moduleId, isAdmin }: { course: any, moduleId: s
     setDuration('10');
     setOrder('0');
     setIsPremium(false);
+    setQuestions([]);
   };
 
   const handleEdit = (lesson: any) => {
@@ -326,6 +335,7 @@ function LessonManager({ course, moduleId, isAdmin }: { course: any, moduleId: s
     setDuration(lesson.durationInMinutes?.toString() || '10');
     setOrder(lesson.orderIndex?.toString() || '0');
     setIsPremium(lesson.isPremium || false);
+    setQuestions(lesson.questions || []);
     setIsDialogOpen(true);
   };
 
@@ -334,6 +344,22 @@ function LessonManager({ course, moduleId, isAdmin }: { course: any, moduleId: s
     if (confirm('¿Eliminar lección?')) {
       deleteDocumentNonBlocking(doc(db, 'courses', course.id, 'modules', moduleId, 'lessons', lessonId));
     }
+  };
+
+  const addQuestion = () => {
+    setQuestions([...questions, { question: '', options: ['', '', '', ''], correctAnswer: 0 }]);
+  };
+
+  const updateQuestion = (index: number, field: string, value: any) => {
+    const newQuestions = [...questions];
+    newQuestions[index][field] = value;
+    setQuestions(newQuestions);
+  };
+
+  const updateOption = (qIndex: number, oIndex: number, value: string) => {
+    const newQuestions = [...questions];
+    newQuestions[qIndex].options[oIndex] = value;
+    setQuestions(newQuestions);
   };
 
   return (
@@ -349,25 +375,15 @@ function LessonManager({ course, moduleId, isAdmin }: { course: any, moduleId: s
               <Plus className="h-3 w-3 mr-1" /> Añadir Contenido
             </Button>
           </DialogTrigger>
-          <DialogContent className="rounded-3xl sm:max-w-[500px]">
+          <DialogContent className="rounded-3xl sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
             <form onSubmit={handleSaveLesson}>
               <DialogHeader>
                 <DialogTitle>{editingLesson ? 'Editar Contenido' : 'Añadir Contenido'}</DialogTitle>
                 <DialogDescription>
-                  Elige entre una clase de video o un desafío interactivo de {course.technology || 'su tecnología'}.
+                  Elige entre clase de video, desafío de código o cuestionario teórico.
                 </DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-6">
-                {!course.technology && (
-                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-2">
-                    <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5" />
-                    <div className="text-[10px] text-amber-700">
-                      <p className="font-bold">Este curso no tiene tecnología asignada.</p>
-                      <p>Ve a la lista de cursos y edítalo para elegir un lenguaje (ej: JavaScript) para poder asignar desafíos.</p>
-                    </div>
-                  </div>
-                )}
-
                 <div className="grid gap-2">
                   <Label>Tipo de Contenido</Label>
                   <Select value={type} onValueChange={(v: any) => setType(v)}>
@@ -377,16 +393,18 @@ function LessonManager({ course, moduleId, isAdmin }: { course: any, moduleId: s
                     <SelectContent>
                       <SelectItem value="video">Clase de Video / Texto</SelectItem>
                       <SelectItem value="challenge">Desafío de Código (Evaluado por IA)</SelectItem>
+                      <SelectItem value="quiz">Cuestionario Teórico</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
-                {type === 'video' ? (
+                <div className="grid gap-2">
+                  <Label>Título de la Clase</Label>
+                  <Input placeholder="Ej: Introducción a..." value={title} onChange={(e) => setTitle(e.target.value)} required className="rounded-xl" />
+                </div>
+
+                {type === 'video' && (
                   <>
-                    <div className="grid gap-2">
-                      <Label>Título de la Clase</Label>
-                      <Input placeholder="Ej: Introducción a..." value={title} onChange={(e) => setTitle(e.target.value)} required className="rounded-xl" />
-                    </div>
                     <div className="grid gap-2">
                       <Label>URL del Video (YouTube)</Label>
                       <Input placeholder="https://youtube.com/..." value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)} className="rounded-xl" />
@@ -396,7 +414,9 @@ function LessonManager({ course, moduleId, isAdmin }: { course: any, moduleId: s
                       <Textarea placeholder="Contenido de la lección..." value={description} onChange={(e) => setDescription(e.target.value)} className="min-h-[120px] rounded-xl" />
                     </div>
                   </>
-                ) : (
+                )}
+
+                {type === 'challenge' && (
                   <div className="grid gap-2">
                     <Label>Seleccionar Desafío compatible ({course.technology || '??'})</Label>
                     <Select value={challengeId} onValueChange={setChallengeId} required>
@@ -404,31 +424,69 @@ function LessonManager({ course, moduleId, isAdmin }: { course: any, moduleId: s
                         <SelectValue placeholder="Elige un reto..." />
                       </SelectTrigger>
                       <SelectContent>
-                        {compatibleChallenges.length > 0 ? (
-                          compatibleChallenges.map(c => (
-                            <SelectItem key={c.id} value={c.id}>
-                              <div className="flex flex-col items-start">
-                                <span className="font-bold">{c.title}</span>
-                                <span className="text-[10px] opacity-60 uppercase">{c.difficulty}</span>
-                              </div>
-                            </SelectItem>
-                          ))
-                        ) : (
-                          <div className="p-4 text-center space-y-2">
-                            <AlertTriangle className="h-5 w-5 text-amber-500 mx-auto" />
-                            <p className="text-xs text-muted-foreground">No hay desafíos creados para {course.technology || 'esta tecnología'}.</p>
-                            <Button variant="link" size="sm" asChild>
-                              <Link href="/admin/challenges">Crear uno ahora →</Link>
-                            </Button>
-                          </div>
-                        )}
+                        {compatibleChallenges.map(c => (
+                          <SelectItem key={c.id} value={c.id}>
+                            <div className="flex flex-col items-start">
+                              <span className="font-bold">{c.title}</span>
+                              <span className="text-[10px] opacity-60 uppercase">{c.difficulty}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
-                    {compatibleChallenges.length === 0 && (
-                      <p className="text-[10px] text-amber-600 bg-amber-50 p-2 rounded-lg border border-amber-200">
-                        Solo puedes asignar desafíos que coincidan con la tecnología del curso.
-                      </p>
-                    )}
+                  </div>
+                )}
+
+                {type === 'quiz' && (
+                  <div className="space-y-6">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-lg font-bold">Preguntas</Label>
+                      <Button type="button" onClick={addQuestion} variant="outline" size="sm" className="rounded-xl gap-2">
+                        <Plus className="h-4 w-4" /> Añadir Pregunta
+                      </Button>
+                    </div>
+                    
+                    {questions.map((q, qIndex) => (
+                      <Card key={qIndex} className="rounded-2xl border-2 border-slate-100 bg-slate-50/50">
+                        <CardContent className="p-6 space-y-4">
+                          <div className="flex items-start gap-4">
+                            <span className="bg-primary text-white w-8 h-8 rounded-full flex items-center justify-center shrink-0 font-bold text-xs">{qIndex + 1}</span>
+                            <div className="flex-1 space-y-2">
+                              <Input 
+                                placeholder="Escribe la pregunta..." 
+                                value={q.question} 
+                                onChange={(e) => updateQuestion(qIndex, 'question', e.target.value)} 
+                                required
+                                className="rounded-xl border-none shadow-none text-sm font-bold bg-transparent"
+                              />
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                {q.options.map((opt: string, oIndex: number) => (
+                                  <div key={oIndex} className="flex items-center gap-2">
+                                    <input 
+                                      type="radio" 
+                                      name={`correct-${qIndex}`} 
+                                      checked={q.correctAnswer === oIndex}
+                                      onChange={() => updateQuestion(qIndex, 'correctAnswer', oIndex)}
+                                      className="h-4 w-4 text-primary"
+                                    />
+                                    <Input 
+                                      placeholder={`Opción ${oIndex + 1}`} 
+                                      value={opt} 
+                                      onChange={(e) => updateOption(qIndex, oIndex, e.target.value)}
+                                      required
+                                      className="rounded-lg h-9 text-xs bg-white"
+                                    />
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                            <Button variant="ghost" size="icon" className="text-destructive" onClick={() => setQuestions(questions.filter((_, i) => i !== qIndex))}>
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
                   </div>
                 )}
 
@@ -449,7 +507,7 @@ function LessonManager({ course, moduleId, isAdmin }: { course: any, moduleId: s
                 </div>
               </div>
               <DialogFooter>
-                <Button type="submit" className="w-full rounded-xl h-11" disabled={(type === 'challenge' && !challengeId) || !course.technology}>
+                <Button type="submit" className="w-full rounded-xl h-11" disabled={(type === 'challenge' && !challengeId) || (type === 'quiz' && questions.length === 0)}>
                   Guardar Contenido
                 </Button>
               </DialogFooter>
@@ -462,8 +520,8 @@ function LessonManager({ course, moduleId, isAdmin }: { course: any, moduleId: s
           <div key={lesson.id} className="bg-slate-50 p-4 rounded-2xl border flex flex-col gap-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className={`p-2 rounded-xl ${lesson.type === 'challenge' ? 'bg-primary/10 text-primary' : 'bg-slate-200 text-slate-600'}`}>
-                  {lesson.type === 'challenge' ? <Code2 className="h-5 w-5" /> : <PlayCircle className="h-5 w-5" />}
+                <div className={`p-2 rounded-xl ${lesson.type === 'challenge' ? 'bg-primary/10 text-primary' : lesson.type === 'quiz' ? 'bg-amber-100 text-amber-600' : 'bg-slate-200 text-slate-600'}`}>
+                  {lesson.type === 'challenge' ? <Code2 className="h-5 w-5" /> : lesson.type === 'quiz' ? <HelpCircle className="h-5 w-5" /> : <PlayCircle className="h-5 w-5" />}
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
@@ -471,7 +529,7 @@ function LessonManager({ course, moduleId, isAdmin }: { course: any, moduleId: s
                     {lesson.isPremium && <Badge variant="outline" className="text-[10px] py-0 h-4 bg-amber-50 text-amber-600 border-amber-200">Premium</Badge>}
                   </div>
                   <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">
-                    {lesson.type === 'challenge' ? 'Desafío Evaluado' : 'Lección de Contenido'}
+                    {lesson.type === 'challenge' ? 'Desafío Evaluado' : lesson.type === 'quiz' ? 'Cuestionario Teórico' : 'Lección de Contenido'}
                   </p>
                 </div>
               </div>

@@ -130,6 +130,24 @@
         "unlockedAt": { "type": "string", "format": "date-time" },
         "challengeId": { "type": "string" }
       }
+    },
+    "Quiz": {
+      "title": "Quiz",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "questions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "question": { "type": "string" },
+              "options": { "type": "array", "items": { "type": "string" } },
+              "correctAnswer": { "type": "number" }
+            }
+          }
+        }
+      }
     }
   },
   "auth": {
@@ -148,6 +166,10 @@
       {
         "path": "/users/{userId}/achievements/{achievementId}",
         "definition": { "entityName": "Achievement", "schema": { "$ref": "#/backend/entities/Achievement" } }
+      },
+      {
+        "path": "/courses/{courseId}/modules/{moduleId}/lessons/{lessonId}",
+        "definition": { "entityName": "Lesson", "schema": { "type": "object" } }
       }
     ]
   }
