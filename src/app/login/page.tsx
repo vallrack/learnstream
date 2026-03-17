@@ -41,8 +41,11 @@ export default function LoginPage() {
     if (!firestore || !authUser) return;
     
     // CRÍTICO: No creamos documento en Firestore para usuarios anónimos (invitados)
-    // Esto evita llenar la base de datos de perfiles vacíos.
     if (authUser.isAnonymous) return;
+
+    // DEFINICIÓN DE ADMINISTRADORES
+    const ADMIN_EMAILS = ['varrack67@gmail.com', 'vallrack67@gmail.com'];
+    const isAdmin = ADMIN_EMAILS.includes(authUser.email?.toLowerCase());
 
     const userRef = doc(firestore, 'users', authUser.uid);
     try {
@@ -51,16 +54,21 @@ export default function LoginPage() {
       if (!userDoc.exists()) {
         setDocumentNonBlocking(userRef, {
           id: authUser.uid,
-          displayName: nameOverride || email.split('@')[0] || 'Estudiante',
+          displayName: nameOverride || authUser.email?.split('@')[0] || 'Usuario',
           email: authUser.email,
           profileImageUrl: authUser.photoURL || `https://picsum.photos/seed/${authUser.uid}/200/200`,
           createdAt: serverTimestamp(),
-          isPremiumSubscriber: false,
-          role: 'student',
+          isPremiumSubscriber: isAdmin, // El admin suele tener acceso total
+          role: isAdmin ? 'admin' : 'student',
           isActive: true,
           xp: 0,
           level: 1
         }, { merge: true });
+      } else {
+        // Si ya existe pero el rol cambió por ser admin, actualizamos solo el rol
+        if (isAdmin && userDoc.data()?.role !== 'admin') {
+          setDocumentNonBlocking(userRef, { role: 'admin' }, { merge: true });
+        }
       }
     } catch (e) {
       console.warn("Could not sync profile during login", e);
@@ -101,12 +109,10 @@ export default function LoginPage() {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       
-      // Update Auth Profile
       await updateProfile(userCredential.user, {
         displayName: displayName
       });
 
-      // Sync Firestore Profile
       await syncUserProfile(userCredential.user, displayName);
       
       router.push('/dashboard');
@@ -127,7 +133,6 @@ export default function LoginPage() {
     setError(null);
     try {
       await signInAnonymously(auth);
-      // No llamamos a syncUserProfile para invitados
       router.push('/dashboard');
     } catch (err: any) {
       let message = 'Error al iniciar sesión como invitado.';

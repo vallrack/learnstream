@@ -47,10 +47,13 @@ export default function AdminStudentsPage() {
   }, [db]);
   const { data: allCourses } = useCollection(coursesQuery);
 
-  // FILTRO CLAVE: Solo mostramos usuarios que tengan email (usuarios registrados)
-  // Esto elimina automáticamente a los "Invitados" de la lista de gestión.
+  // FILTRO CLAVE: 
+  // 1. Solo mostramos usuarios registrados (con email).
+  // 2. EXCLUIMOS a los administradores de la lista de gestión académica.
   const filteredStudents = students?.filter(s => 
-    s.email && (
+    s.email && 
+    s.role !== 'admin' &&
+    (
       s.displayName?.toLowerCase().includes(searchTerm.toLowerCase()) || 
       s.email?.toLowerCase().includes(searchTerm.toLowerCase())
     )
