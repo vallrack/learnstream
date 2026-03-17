@@ -5,6 +5,7 @@ import { FirebaseClientProvider } from '@/firebase/client-provider';
 import { TranslationProvider } from '@/lib/i18n/use-translation';
 import { InactivityLogout } from '@/components/auth/InactivityLogout';
 import { Toaster } from '@/components/ui/toaster';
+import { FloatingWhatsApp } from '@/components/layout/FloatingWhatsApp';
 
 export const metadata: Metadata = {
   title: 'LearnStream - Academia Digital Moderna',
@@ -28,6 +29,7 @@ export default function RootLayout({
           <FirebaseClientProvider>
             <InactivityLogout />
             {children}
+            <FloatingWhatsApp />
             <Toaster />
           </FirebaseClientProvider>
         </TranslationProvider>
