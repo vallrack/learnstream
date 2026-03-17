@@ -16,7 +16,9 @@ import {
   CreditCard,
   Tag,
   CheckCircle2,
-  XCircle
+  XCircle,
+  AlertTriangle,
+  Globe
 } from 'lucide-react';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc, collection, query, where, getDocs, limit } from 'firebase/firestore';
@@ -112,7 +114,7 @@ export default function CheckoutPage() {
       toast({
         variant: "destructive",
         title: "Configuración incompleta",
-        description: "Falta la llave pública de ePayco. Contacta al administrador.",
+        description: "Falta la llave pública de ePayco (NEXT_PUBLIC_EPAYCO_PUBLIC_KEY).",
       });
       return;
     }
@@ -121,7 +123,7 @@ export default function CheckoutPage() {
       toast({
         variant: "destructive",
         title: "Pasarela no cargada",
-        description: "El script de ePayco no se cargó correctamente. Recarga la página.",
+        description: "El script de ePayco no se cargó. Verifica tu conexión.",
       });
       return;
     }
@@ -131,12 +133,12 @@ export default function CheckoutPage() {
     try {
       const handler = (window as any).ePayco.checkout.configure({
         key: publicKey,
-        test: false // Cambiar a true si vas a usar tarjetas de prueba
+        test: false 
       });
 
       const data = {
         name: "LearnStream Premium",
-        description: "Acceso vitalicio a todos los cursos y desafíos de IA",
+        description: "Acceso vitalicio a cursos y desafíos IA",
         invoice: `LS-${Date.now()}-${user.uid.substring(0, 5)}`,
         currency: "cop",
         amount: finalPrice.toString(),
@@ -155,7 +157,7 @@ export default function CheckoutPage() {
       handler.open(data);
     } catch (err) {
       console.error("ePayco error:", err);
-      toast({ variant: "destructive", title: "Error al abrir pasarela", description: "No se pudo iniciar el proceso de pago." });
+      toast({ variant: "destructive", title: "Error al abrir pasarela", description: "Asegúrate de haber autorizado este dominio en el panel de ePayco." });
     } finally {
       setIsProcessing(false);
     }
@@ -172,6 +174,20 @@ export default function CheckoutPage() {
       />
       
       <main className="max-w-6xl mx-auto px-6 py-12">
+        {/* Aviso de Configuración para el Admin */}
+        {user?.email === 'varrack67@gmail.com' && (
+          <div className="mb-8 p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-start gap-4">
+            <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+            <div className="text-sm text-amber-800">
+              <p className="font-bold mb-1">Nota para el Administrador:</p>
+              <p>Si la pasarela se queda cargando, asegúrate de añadir este dominio en tu panel de ePayco:</p>
+              <code className="block mt-2 bg-white/50 p-2 rounded border font-mono text-[10px] break-all">
+                {typeof window !== 'undefined' ? window.location.origin : 'Cargando...'}
+              </code>
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
           <div className="space-y-8">
             <div>
@@ -274,12 +290,12 @@ export default function CheckoutPage() {
                   {isProcessing ? (
                     <>
                       <Loader2 className="h-6 w-6 animate-spin mr-2" />
-                      Iniciando ePayco...
+                      Abriendo pasarela...
                     </>
                   ) : !isScriptLoaded ? (
                     <>
                       <Loader2 className="h-6 w-6 animate-spin mr-2" />
-                      Cargando pasarela...
+                      Cargando ePayco...
                     </>
                   ) : (
                     <>
@@ -295,15 +311,15 @@ export default function CheckoutPage() {
                 </div>
               </div>
             </CardContent>
-            <CardFooter className="bg-slate-50/50 p-6 flex flex-col gap-4">
-              <div className="flex flex-wrap justify-center gap-4 opacity-60 grayscale h-6">
-                <img src="https://multimedia.epayco.co/epayco-landing/v2/pse.png" alt="PSE" className="h-full" />
-                <img src="https://multimedia.epayco.co/epayco-landing/v2/nequi.png" alt="Nequi" className="h-full" />
-                <img src="https://multimedia.epayco.co/epayco-landing/v2/daviplata.png" alt="Daviplata" className="h-full" />
-                <img src="https://multimedia.epayco.co/epayco-landing/v2/efecty.png" alt="Efecty" className="h-full" />
+            <CardFooter className="bg-slate-50/50 p-6 flex flex-col gap-6">
+              <div className="flex flex-wrap justify-center items-center gap-6 h-8">
+                <img src="https://multimedia.epayco.co/epayco-landing/v2/pse.png" alt="PSE" className="h-full object-contain" />
+                <img src="https://multimedia.epayco.co/epayco-landing/v2/nequi.png" alt="Nequi" className="h-full object-contain" />
+                <img src="https://multimedia.epayco.co/epayco-landing/v2/daviplata.png" alt="Daviplata" className="h-full object-contain" />
+                <img src="https://multimedia.epayco.co/epayco-landing/v2/efecty.png" alt="Efecty" className="h-full object-contain" />
               </div>
-              <p className="text-[10px] text-center text-muted-foreground leading-relaxed px-4">
-                Tu acceso Premium se activará automáticamente una vez confirmado el pago por ePayco.
+              <p className="text-[10px] text-center text-muted-foreground leading-relaxed px-4 max-w-sm">
+                Tu acceso Premium se activará automáticamente una vez confirmado el pago. Soporte disponible 24/7.
               </p>
             </CardFooter>
           </Card>
