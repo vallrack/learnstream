@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -17,11 +18,12 @@ import {
   CheckCircle2,
   XCircle
 } from 'lucide-react';
-import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
+import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc, collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import Script from 'next/script';
 
 export default function CheckoutPage() {
   const { user, isUserLoading } = useUser();
@@ -33,6 +35,7 @@ export default function CheckoutPage() {
   const [couponCode, setCouponCode] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
   const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
+  const [isScriptLoaded, setIsScriptLoaded] = useState(false);
 
   const BASE_PRICE = 120000; // Valor base en COP
 
@@ -77,13 +80,11 @@ export default function CheckoutPage() {
       } else {
         const promo = { id: snap.docs[0].id, ...snap.docs[0].data() } as any;
         
-        // Validar expiración
         if (promo.expiresAt && promo.expiresAt.toDate() < new Date()) {
           toast({ variant: "destructive", title: "Cupón vencido", description: "Esta oferta ya no está disponible." });
           return;
         }
 
-        // Validar límite de uso
         if (promo.usageLimit > 0 && (promo.timesUsed || 0) >= promo.usageLimit) {
           toast({ variant: "destructive", title: "Cupón agotado", description: "Se ha alcanzado el límite máximo de usos para este código." });
           return;
@@ -100,7 +101,10 @@ export default function CheckoutPage() {
   };
 
   const handleStartPayment = () => {
-    if (!user?.uid || !user.email) return;
+    if (!user?.uid || !user.email) {
+      toast({ variant: "destructive", title: "Error de usuario", description: "Debes tener un correo asociado para pagar." });
+      return;
+    }
     
     const publicKey = process.env.NEXT_PUBLIC_EPAYCO_PUBLIC_KEY;
     
@@ -113,23 +117,27 @@ export default function CheckoutPage() {
       return;
     }
 
+    if (!(window as any).ePayco) {
+      toast({
+        variant: "destructive",
+        title: "Pasarela no cargada",
+        description: "El script de ePayco no se cargó correctamente. Recarga la página.",
+      });
+      return;
+    }
+
     setIsProcessing(true);
 
-    const script = document.createElement('script');
-    script.src = 'https://checkout.epayco.co/checkout.js';
-    script.async = true;
-    script.onload = () => {
+    try {
       const handler = (window as any).ePayco.checkout.configure({
         key: publicKey,
-        test: false 
+        test: false // Cambiar a true si vas a usar tarjetas de prueba
       });
 
       const data = {
-        name: "LearnStream Premium - Acceso Ilimitado",
-        description: appliedCoupon 
-          ? `Acceso vitalicio (Cupón: ${appliedCoupon.code})` 
-          : "Acceso de por vida a todos los cursos y desafíos de IA",
-        invoice: `LS-${Date.now()}`,
+        name: "LearnStream Premium",
+        description: "Acceso vitalicio a todos los cursos y desafíos de IA",
+        invoice: `LS-${Date.now()}-${user.uid.substring(0, 5)}`,
         currency: "cop",
         amount: finalPrice.toString(),
         tax_base: "0",
@@ -138,17 +146,19 @@ export default function CheckoutPage() {
         lang: "es",
         external: "false",
         response: `${window.location.origin}/checkout/success`,
-        name_billing: user.displayName || "Estudiante",
+        name_billing: user.displayName || "Estudiante LearnStream",
         email_billing: user.email,
         extra1: user.uid, 
-        extra2: appliedCoupon?.id || "", // Pasamos el ID del cupón para tracking
+        extra2: appliedCoupon?.id || "none",
       };
 
       handler.open(data);
+    } catch (err) {
+      console.error("ePayco error:", err);
+      toast({ variant: "destructive", title: "Error al abrir pasarela", description: "No se pudo iniciar el proceso de pago." });
+    } finally {
       setIsProcessing(false);
-    };
-    
-    document.body.appendChild(script);
+    }
   };
 
   if (isUserLoading) return <div className="h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
@@ -156,6 +166,10 @@ export default function CheckoutPage() {
   return (
     <div className="min-h-screen bg-[#F8FAFC]">
       <Navbar />
+      <Script 
+        src="https://checkout.epayco.co/checkout.js" 
+        onLoad={() => setIsScriptLoaded(true)}
+      />
       
       <main className="max-w-6xl mx-auto px-6 py-12">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
@@ -254,13 +268,18 @@ export default function CheckoutPage() {
               <div className="space-y-4">
                 <Button 
                   onClick={handleStartPayment} 
-                  disabled={isProcessing}
+                  disabled={isProcessing || !isScriptLoaded}
                   className="w-full h-16 rounded-2xl text-xl font-bold shadow-xl shadow-primary/20 transition-all hover:scale-[1.02] bg-primary"
                 >
                   {isProcessing ? (
                     <>
                       <Loader2 className="h-6 w-6 animate-spin mr-2" />
                       Iniciando ePayco...
+                    </>
+                  ) : !isScriptLoaded ? (
+                    <>
+                      <Loader2 className="h-6 w-6 animate-spin mr-2" />
+                      Cargando pasarela...
                     </>
                   ) : (
                     <>
