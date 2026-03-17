@@ -17,7 +17,10 @@ import {
   ChevronRight,
   Layout,
   Terminal,
-  Trophy
+  Trophy,
+  Eye,
+  EyeOff,
+  BookOpen
 } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -84,13 +87,20 @@ export default function AdminChallengesPage() {
   const [initialCode, setInitialCode] = useState('');
   const [solution, setSolution] = useState('');
   const [isFree, setIsFree] = useState(true);
+  const [visibility, setVisibility] = useState<'public' | 'private'>('public');
+  const [courseId, setCourseId] = useState<string>('none');
 
   const challengesQuery = useMemoFirebase(() => {
     if (!db) return null;
     return collection(db, 'coding_challenges');
   }, [db]);
-
   const { data: challenges, isLoading } = useCollection(challengesQuery);
+
+  const coursesQuery = useMemoFirebase(() => {
+    if (!db) return null;
+    return collection(db, 'courses');
+  }, [db]);
+  const { data: courses } = useCollection(coursesQuery);
 
   const resetForm = () => {
     setEditingId(null);
@@ -101,6 +111,8 @@ export default function AdminChallengesPage() {
     setInitialCode('');
     setSolution('');
     setIsFree(true);
+    setVisibility('public');
+    setCourseId('none');
   };
 
   const handleEditClick = (challenge: any) => {
@@ -112,6 +124,8 @@ export default function AdminChallengesPage() {
     setInitialCode(challenge.initialCode || '');
     setSolution(challenge.solution || '');
     setIsFree(challenge.isFree ?? true);
+    setVisibility(challenge.visibility || 'public');
+    setCourseId(challenge.courseId || 'none');
     setIsDialogOpen(true);
   };
 
@@ -127,6 +141,8 @@ export default function AdminChallengesPage() {
       initialCode,
       solution,
       isFree,
+      visibility,
+      courseId: visibility === 'private' ? courseId : null,
       updatedAt: serverTimestamp(),
     };
 
@@ -149,7 +165,6 @@ export default function AdminChallengesPage() {
     }
   };
 
-  // Filtrado y Agrupación
   const filteredChallenges = challenges?.filter(challenge => {
     const matchesSearch = challenge.title?.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           challenge.description?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -196,7 +211,7 @@ export default function AdminChallengesPage() {
                 <DialogHeader>
                   <DialogTitle className="text-2xl font-headline">{editingId ? 'Editar Desafío' : 'Crear Desafío'}</DialogTitle>
                   <DialogDescription>
-                    Define los requisitos técnicos. Recuerda que la IA usará esta información para calificar al alumno.
+                    Define la visibilidad y requisitos técnicos. Los desafíos privados solo aparecen si el alumno está inscrito en el curso asociado.
                   </DialogDescription>
                 </DialogHeader>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-10 py-8">
@@ -208,6 +223,18 @@ export default function AdminChallengesPage() {
                     
                     <div className="grid grid-cols-2 gap-4">
                       <div className="grid gap-2">
+                        <Label className="font-bold">Visibilidad</Label>
+                        <Select value={visibility} onValueChange={(v: any) => setVisibility(v)}>
+                          <SelectTrigger className="rounded-xl h-11">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="public">Público (Catálogo)</SelectItem>
+                            <SelectItem value="private">Solo para Curso</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="grid gap-2">
                         <Label className="font-bold">Dificultad</Label>
                         <Select value={difficulty} onValueChange={setDifficulty}>
                           <SelectTrigger className="rounded-xl h-11"><SelectValue /></SelectTrigger>
@@ -215,6 +242,52 @@ export default function AdminChallengesPage() {
                             <SelectItem value="Principiante">Principiante</SelectItem>
                             <SelectItem value="Intermedio">Intermedio</SelectItem>
                             <SelectItem value="Avanzado">Avanzado</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    {visibility === 'private' && (
+                      <div className="grid gap-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                        <Label className="font-bold flex items-center gap-2">
+                          Curso Asociado
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild><Info className="h-3 w-3 text-muted-foreground cursor-help" /></TooltipTrigger>
+                              <TooltipContent><p className="text-[10px]">Solo los alumnos inscritos en este curso verán el desafío.</p></TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </Label>
+                        <Select value={courseId} onValueChange={setCourseId} required={visibility === 'private'}>
+                          <SelectTrigger className="rounded-xl h-11"><SelectValue placeholder="Seleccionar curso..." /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">Sin asignar</SelectItem>
+                            {courses?.map(c => <SelectItem key={c.id} value={c.id}>{c.title}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="grid gap-2">
+                        <Label className="font-bold">Tecnología Requerida</Label>
+                        <Select value={technology} onValueChange={setTechnology}>
+                          <SelectTrigger className="rounded-xl h-11"><SelectValue placeholder="Lenguaje..." /></SelectTrigger>
+                          <SelectContent className="max-h-[300px]">
+                            {Object.entries(TECH_STACK).map(([category, subgroups]) => (
+                              <SelectGroup key={category}>
+                                <SelectLabel className="bg-muted/50 py-1.5">{category}</SelectLabel>
+                                {Array.isArray(subgroups) 
+                                  ? subgroups.map(tech => <SelectItem key={tech} value={tech}>{tech}</SelectItem>)
+                                  : Object.entries(subgroups).map(([sub, techs]) => (
+                                      <div key={sub} className="px-2">
+                                        <p className="text-[10px] uppercase font-bold text-muted-foreground mt-2 mb-1 pl-2">{sub}</p>
+                                        {techs.map(tech => <SelectItem key={tech} value={tech}>{tech}</SelectItem>)}
+                                      </div>
+                                    ))
+                                }
+                              </SelectGroup>
+                            ))}
                           </SelectContent>
                         </Select>
                       </div>
@@ -228,55 +301,19 @@ export default function AdminChallengesPage() {
                     </div>
 
                     <div className="grid gap-2">
-                      <Label className="font-bold">Tecnología Requerida</Label>
-                      <Select value={technology} onValueChange={setTechnology}>
-                        <SelectTrigger className="rounded-xl h-11"><SelectValue placeholder="Selecciona el lenguaje..." /></SelectTrigger>
-                        <SelectContent className="max-h-[300px]">
-                          {Object.entries(TECH_STACK).map(([category, subgroups]) => (
-                            <SelectGroup key={category}>
-                              <SelectLabel className="bg-muted/50 py-1.5">{category}</SelectLabel>
-                              {Array.isArray(subgroups) 
-                                ? subgroups.map(tech => <SelectItem key={tech} value={tech}>{tech}</SelectItem>)
-                                : Object.entries(subgroups).map(([sub, techs]) => (
-                                    <div key={sub} className="px-2">
-                                      <p className="text-[10px] uppercase font-bold text-muted-foreground mt-2 mb-1 pl-2">{sub}</p>
-                                      {techs.map(tech => <SelectItem key={tech} value={tech}>{tech}</SelectItem>)}
-                                    </div>
-                                  ))
-                              }
-                            </SelectGroup>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="grid gap-2">
-                      <Label className="font-bold">Enunciado (Instrucciones)</Label>
+                      <Label className="font-bold">Enunciado</Label>
                       <Textarea 
                         value={description} 
                         onChange={(e) => setDescription(e.target.value)} 
-                        className="min-h-[200px] rounded-2xl resize-none" 
-                        placeholder="Explica detalladamente qué debe resolver el alumno..." 
+                        className="min-h-[150px] rounded-2xl resize-none" 
+                        placeholder="Explica qué debe resolver el alumno..." 
                       />
                     </div>
                   </div>
                   
                   <div className="space-y-8 bg-muted/20 p-6 rounded-[2rem] border">
                     <div className="grid gap-3">
-                      <div className="flex items-center justify-between">
-                        <Label className="font-bold flex items-center gap-2">
-                          Código Inicial (Plantilla)
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild><Info className="h-4 w-4 text-primary cursor-help" /></TooltipTrigger>
-                              <TooltipContent className="max-w-[250px] p-3 rounded-xl shadow-xl">
-                                <p className="text-xs leading-relaxed">Es el <strong>punto de partida</strong> que el alumno verá escrito en su editor. Úsalo para definir la estructura de la función o los divs básicos para que no empiece de cero.</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        </Label>
-                      </div>
-                      <p className="text-[10px] text-muted-foreground -mt-2">Esto es lo que el alumno verá al abrir el reto.</p>
+                      <Label className="font-bold">Código Inicial (Plantilla)</Label>
                       <Textarea 
                         value={initialCode} 
                         onChange={(e) => setInitialCode(e.target.value)} 
@@ -286,32 +323,19 @@ export default function AdminChallengesPage() {
                     </div>
 
                     <div className="grid gap-3">
-                      <div className="flex items-center justify-between">
-                        <Label className="font-bold flex items-center gap-2">
-                          Solución Correcta (Referencia)
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild><Info className="h-4 w-4 text-emerald-600 cursor-help" /></TooltipTrigger>
-                              <TooltipContent className="max-w-[250px] p-3 rounded-xl shadow-xl">
-                                <p className="text-xs leading-relaxed">Este código <strong>NO lo ve el alumno</strong>. Sirve para que la IA sepa exactamente cuál es la respuesta esperada y pueda calificar con precisión.</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        </Label>
-                      </div>
-                      <p className="text-[10px] text-emerald-600/70 -mt-2">Solo para uso de la IA evaluadora.</p>
+                      <Label className="font-bold text-emerald-600">Solución Correcta (Referencia IA)</Label>
                       <Textarea 
                         value={solution} 
                         onChange={(e) => setSolution(e.target.value)} 
                         className="font-mono text-[11px] min-h-[180px] rounded-2xl border-emerald-200 bg-emerald-50/20" 
-                        placeholder="Escribe la solución perfecta aquí..." 
+                        placeholder="La solución perfecta para la IA..." 
                       />
                     </div>
                   </div>
                 </div>
                 <DialogFooter>
                   <Button type="submit" className="w-full rounded-2xl h-14 text-lg font-bold shadow-xl shadow-primary/20">
-                    {editingId ? 'Guardar Cambios' : 'Publicar Desafío'}
+                    {editingId ? 'Actualizar Desafío' : 'Publicar Desafío'}
                   </Button>
                 </DialogFooter>
               </form>
@@ -347,28 +371,6 @@ export default function AdminChallengesPage() {
               </SelectContent>
             </Select>
           </div>
-          <div className="w-full md:w-48 space-y-2">
-            <Label className="text-xs font-bold uppercase text-muted-foreground ml-1">Tecnología</Label>
-            <Select value={filterTech} onValueChange={setFilterTech}>
-              <SelectTrigger className="rounded-xl h-11">
-                <SelectValue placeholder="Todas" />
-              </SelectTrigger>
-              <SelectContent className="max-h-[300px]">
-                <SelectItem value="all">Todas</SelectItem>
-                {Object.entries(TECH_STACK).map(([category, subgroups]) => (
-                  <SelectGroup key={category}>
-                    <SelectLabel className="bg-muted/50 py-1.5">{category}</SelectLabel>
-                    {Array.isArray(subgroups) 
-                      ? subgroups.map(tech => <SelectItem key={tech} value={tech}>{tech}</SelectItem>)
-                      : Object.entries(subgroups).map(([sub, techs]) => 
-                          techs.map(tech => <SelectItem key={tech} value={tech}>{tech}</SelectItem>)
-                        )
-                    }
-                  </SelectGroup>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
           <Button variant="ghost" onClick={() => { setSearchTerm(''); setFilterDifficulty('all'); setFilterTech('all'); }} className="h-11 px-4 rounded-xl text-xs text-muted-foreground">
             Limpiar
           </Button>
@@ -395,7 +397,7 @@ export default function AdminChallengesPage() {
                       </div>
                       <div>
                         <h2 className="text-xl font-headline font-bold">{tech}</h2>
-                        <p className="text-xs text-muted-foreground">{techChallenges.length} {techChallenges.length === 1 ? 'desafío' : 'desafíos'} en esta categoría</p>
+                        <p className="text-xs text-muted-foreground">{techChallenges.length} {techChallenges.length === 1 ? 'desafío' : 'desafíos'}</p>
                       </div>
                     </div>
                   </AccordionTrigger>
@@ -404,8 +406,8 @@ export default function AdminChallengesPage() {
                       <TableHeader>
                         <TableRow className="border-none hover:bg-transparent">
                           <TableHead className="w-[40%]">Título</TableHead>
+                          <TableHead>Visibilidad</TableHead>
                           <TableHead>Acceso</TableHead>
-                          <TableHead>Dificultad</TableHead>
                           <TableHead className="text-right pr-4">Acciones</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -415,24 +417,28 @@ export default function AdminChallengesPage() {
                             <TableCell className="font-bold py-4">
                               <div className="flex flex-col">
                                 <span>{challenge.title}</span>
-                                <span className="text-[10px] text-muted-foreground font-normal line-clamp-1">{challenge.description}</span>
+                                <Badge variant="secondary" className="w-fit text-[9px] h-4 mt-1">{challenge.difficulty}</Badge>
                               </div>
                             </TableCell>
                             <TableCell>
-                              {challenge.isFree ? (
-                                <Badge variant="outline" className="text-emerald-600 border-emerald-200 bg-emerald-50 rounded-lg"><Unlock className="h-3 w-3 mr-1" /> Gratis</Badge>
+                              {challenge.visibility === 'private' ? (
+                                <div className="flex items-center gap-1.5 text-amber-600">
+                                  <EyeOff className="h-3 w-3" />
+                                  <span className="text-xs font-medium">Solo Curso</span>
+                                </div>
                               ) : (
-                                <Badge variant="outline" className="text-amber-600 border-amber-200 bg-amber-50 rounded-lg"><Lock className="h-3 w-3 mr-1" /> Premium</Badge>
+                                <div className="flex items-center gap-1.5 text-emerald-600">
+                                  <Eye className="h-3 w-3" />
+                                  <span className="text-xs font-medium">Catálogo</span>
+                                </div>
                               )}
                             </TableCell>
                             <TableCell>
-                              <Badge className={
-                                challenge.difficulty === 'Principiante' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-200' :
-                                challenge.difficulty === 'Intermedio' ? 'bg-amber-500/10 text-amber-600 border-amber-200' :
-                                'bg-rose-500/10 text-rose-600 border-rose-200'
-                              }>
-                                {challenge.difficulty}
-                              </Badge>
+                              {challenge.isFree ? (
+                                <Badge variant="outline" className="text-emerald-600 border-emerald-200 bg-emerald-50 rounded-lg">Gratis</Badge>
+                              ) : (
+                                <Badge variant="outline" className="text-amber-600 border-amber-200 bg-amber-50 rounded-lg">Premium</Badge>
+                              )}
                             </TableCell>
                             <TableCell className="text-right pr-4">
                               <div className="flex items-center justify-end gap-1">
@@ -455,10 +461,9 @@ export default function AdminChallengesPage() {
               ))}
             </Accordion>
           ) : (
-            <div className="text-center py-20 bg-white rounded-[3rem] border-4 border-dashed max-w-2xl mx-auto flex flex-col items-center">
-              <Filter className="h-12 w-12 text-muted-foreground opacity-20 mb-4" />
-              <p className="text-muted-foreground font-medium">No se encontraron desafíos que coincidan con los filtros.</p>
-              <Button variant="link" onClick={() => { setSearchTerm(''); setFilterDifficulty('all'); setFilterTech('all'); }}>Ver todos los desafíos</Button>
+            <div className="text-center py-20 bg-white rounded-[3rem] border-4 border-dashed max-w-2xl mx-auto">
+              <Filter className="h-12 w-12 text-muted-foreground opacity-20 mb-4 mx-auto" />
+              <p className="text-muted-foreground font-medium">No se encontraron desafíos.</p>
             </div>
           )}
         </div>

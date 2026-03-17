@@ -4,22 +4,41 @@ import { Navbar } from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Search, Code2, Terminal, ArrowRight, Loader2, Sparkles, Layout, Lock, Unlock, LogIn } from 'lucide-react';
+import { Search, Code2, Terminal, ArrowRight, Loader2, Sparkles, Layout, Lock, Unlock, LogIn, EyeOff } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
-import { collection, query, orderBy } from 'firebase/firestore';
+import { useCollection, useFirestore, useMemoFirebase, useUser, useDoc } from '@/firebase';
+import { collection, query, orderBy, doc } from 'firebase/firestore';
 import Link from 'next/link';
+import { useState, useMemo } from 'react';
 
 export default function ChallengesCataloguePage() {
   const db = useFirestore();
   const { user } = useUser();
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const profileRef = useMemoFirebase(() => {
+    if (!db || !user?.uid) return null;
+    return doc(db, 'users', user.uid);
+  }, [db, user?.uid]);
+  const { data: profile } = useDoc(profileRef);
+  const isAdmin = profile?.role === 'admin';
+
+  const progressQuery = useMemoFirebase(() => {
+    if (!db || !user?.uid) return null;
+    return collection(db, 'users', user.uid, 'courseProgress');
+  }, [db, user?.uid]);
+  const { data: userProgress } = useCollection(progressQuery);
+
+  const enrolledCourseIds = useMemo(() => {
+    return userProgress?.map(p => p.courseId) || [];
+  }, [userProgress]);
 
   const challengesQuery = useMemoFirebase(() => {
     if (!db) return null;
     return query(collection(db, 'coding_challenges'), orderBy('createdAt', 'desc'));
   }, [db]);
 
-  const { data: challenges, isLoading } = useCollection(challengesQuery);
+  const { data: allChallenges, isLoading } = useCollection(challengesQuery);
 
   const getDifficultyColor = (diff: string) => {
     switch (diff) {
@@ -30,13 +49,33 @@ export default function ChallengesCataloguePage() {
     }
   };
 
-  // Agrupar desafíos por tecnología
-  const groupedChallenges = challenges?.reduce((acc, challenge) => {
-    const tech = challenge.technology || 'Otros';
-    if (!acc[tech]) acc[tech] = [];
-    acc[tech].push(challenge);
-    return acc;
-  }, {} as Record<string, any[]>);
+  // FILTRADO CRÍTICO: 
+  // 1. Desafíos Públicos (visibility === 'public' o undefined)
+  // 2. Desafíos de cursos en los que el alumno está inscrito
+  // 3. Admin ve todo
+  const filteredChallenges = useMemo(() => {
+    return allChallenges?.filter(challenge => {
+      const isVisible = isAdmin || 
+                        challenge.visibility === 'public' || 
+                        !challenge.visibility ||
+                        (challenge.visibility === 'private' && enrolledCourseIds.includes(challenge.courseId));
+      
+      const matchesSearch = challenge.title?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                            challenge.technology?.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      return isVisible && matchesSearch;
+    }) || [];
+  }, [allChallenges, isAdmin, enrolledCourseIds, searchTerm]);
+
+  // Agrupar por tecnología
+  const groupedChallenges = useMemo(() => {
+    return filteredChallenges.reduce((acc, challenge) => {
+      const tech = challenge.technology || 'Otros';
+      if (!acc[tech]) acc[tech] = [];
+      acc[tech].push(challenge);
+      return acc;
+    }, {} as Record<string, any[]>);
+  }, [filteredChallenges]);
 
   return (
     <div className="min-h-screen bg-[#F8FAFC]">
@@ -50,13 +89,18 @@ export default function ChallengesCataloguePage() {
           </div>
           <h1 className="text-4xl md:text-6xl font-headline font-bold mb-6 text-foreground">Desafíos de Código</h1>
           <p className="text-lg text-muted-foreground mb-10 leading-relaxed">
-            Pon a prueba tu lógica con algoritmos o tu creatividad con retos de diseño UI/UX. 
-            Aprende practicando con problemas reales.
+            Pon a prueba tu lógica con retos públicos o exclusivos de tus cursos. 
+            Solo verás desafíos de cursos en los que estés inscrito.
           </p>
           
           <div className="relative max-w-xl mx-auto">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-            <Input placeholder="Busca por lenguaje, dificultad o tema..." className="pl-12 h-14 rounded-2xl shadow-sm border-muted-foreground/20 focus:ring-primary bg-white" />
+            <Input 
+              placeholder="Busca por lenguaje o tema..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-12 h-14 rounded-2xl shadow-sm border-muted-foreground/20 focus:ring-primary bg-white" 
+            />
           </div>
         </header>
 
@@ -65,9 +109,9 @@ export default function ChallengesCataloguePage() {
             <Loader2 className="h-10 w-10 animate-spin text-primary" />
             <p className="font-medium text-muted-foreground">Preparando los retos...</p>
           </div>
-        ) : challenges && challenges.length > 0 ? (
+        ) : filteredChallenges.length > 0 ? (
           <div className="space-y-20">
-            {Object.entries(groupedChallenges || {}).map(([tech, techChallenges]) => (
+            {Object.entries(groupedChallenges).map(([tech, techChallenges]) => (
               <section key={tech}>
                 <div className="flex items-center gap-4 mb-8 border-b pb-4 border-slate-200">
                   <div className="bg-primary p-2.5 rounded-2xl shadow-lg shadow-primary/20">
@@ -85,13 +129,20 @@ export default function ChallengesCataloguePage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                   {techChallenges.map(challenge => {
                     const isPremium = !challenge.isFree;
-                    const canAccess = challenge.isFree || !!user;
+                    const isCoursePrivate = challenge.visibility === 'private';
 
                     return (
                       <Card key={challenge.id} className="group rounded-[2.5rem] overflow-hidden border-slate-200 hover:shadow-2xl hover:shadow-primary/10 transition-all duration-500 flex flex-col bg-white relative">
+                        {isCoursePrivate && (
+                          <div className="absolute top-4 left-4 z-10">
+                            <Badge variant="secondary" className="bg-amber-100 text-amber-700 border-amber-200 text-[10px] font-bold gap-1 rounded-lg">
+                              <Lock className="h-2.5 w-2.5" /> CURSO
+                            </Badge>
+                          </div>
+                        )}
                         <CardHeader className="p-8 pb-4">
                           <div className="flex items-center justify-between mb-4">
-                            <div className="flex gap-2">
+                            <div className="flex gap-2 ml-auto">
                               <Badge variant="outline" className={`rounded-xl border ${getDifficultyColor(challenge.difficulty)}`}>
                                 {challenge.difficulty}
                               </Badge>
@@ -122,7 +173,7 @@ export default function ChallengesCataloguePage() {
                           ) : (
                             <Button className="w-full h-12 rounded-2xl gap-2 font-bold group-hover:bg-primary transition-all shadow-lg shadow-transparent group-hover:shadow-primary/20" asChild>
                               <Link href={`/challenges/${challenge.id}`}>
-                                {challenge.isFree ? 'Aceptar Desafío' : 'Reto Premium'}
+                                Aceptar Desafío
                                 <ArrowRight className="h-4 w-4" />
                               </Link>
                             </Button>
@@ -136,9 +187,11 @@ export default function ChallengesCataloguePage() {
             ))}
           </div>
         ) : (
-          <div className="text-center py-20 bg-muted/20 rounded-[3rem] border-4 border-dashed max-w-2xl mx-auto">
-            <Code2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <p className="text-muted-foreground font-medium">Aún no hay desafíos publicados en el catálogo.</p>
+          <div className="text-center py-20 bg-muted/20 rounded-[3rem] border-4 border-dashed max-w-2xl mx-auto flex flex-col items-center">
+            <EyeOff className="h-12 w-12 text-muted-foreground opacity-20 mb-4" />
+            <p className="text-muted-foreground font-medium">No hay desafíos visibles para ti en este momento.</p>
+            <p className="text-xs text-muted-foreground mt-2">Inscríbete en cursos para desbloquear sus retos exclusivos.</p>
+            <Link href="/courses" className="mt-6"><Button variant="outline">Explorar Cursos</Button></Link>
           </div>
         )}
       </main>
