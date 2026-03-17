@@ -16,7 +16,8 @@ import {
   Tag,
   CheckCircle2,
   XCircle,
-  AlertTriangle
+  AlertTriangle,
+  MessageCircle
 } from 'lucide-react';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc, collection, query, where, getDocs, limit } from 'firebase/firestore';
@@ -163,6 +164,8 @@ export default function CheckoutPage() {
   };
 
   if (isUserLoading) return <div className="h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+
+  const whatsappLink = `https://wa.me/573054694239?text=Hola%20LearnStream,%20tengo%20problemas%20con%20el%20pago%20de%20mi%20suscripci%C3%B3n%20Premium%20y%20me%20gustar%C3%ADa%20recibir%20ayuda.`;
 
   return (
     <div className="min-h-screen bg-[#F8FAFC]">
@@ -315,6 +318,24 @@ export default function CheckoutPage() {
                   )}
                 </Button>
                 
+                <div className="pt-4 space-y-4 border-t border-dashed">
+                  <p className="text-center text-xs text-muted-foreground font-medium italic">¿Prefieres pagar por transferencia manual o necesitas ayuda?</p>
+                  <a 
+                    href={whatsappLink} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="w-full block"
+                  >
+                    <Button 
+                      variant="outline" 
+                      className="w-full h-14 rounded-2xl gap-3 border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800 font-bold transition-all"
+                    >
+                      <MessageCircle className="h-6 w-6" />
+                      Soporte y Pagos Directos por WhatsApp
+                    </Button>
+                  </a>
+                </div>
+
                 <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
                   <ShieldCheck className="h-4 w-4 text-emerald-600" />
                   Transacción procesada de forma segura por ePayco
