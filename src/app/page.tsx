@@ -4,7 +4,7 @@
 import { Navbar } from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
 import { CourseCard } from '@/components/courses/CourseCard';
-import { Rocket, ShieldCheck, Zap, Sparkles, PlayCircle, Loader2, BookOpen } from 'lucide-react';
+import { Rocket, ShieldCheck, Zap, Sparkles, PlayCircle, Loader2, BookOpen, GraduationCap, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useTranslation } from '@/lib/i18n/use-translation';
@@ -141,6 +141,54 @@ export default function Home() {
                 </Link>
               </div>
             )}
+          </div>
+        </section>
+
+        {/* Instructor Invitation Section */}
+        <section className="py-24 px-6">
+          <div className="max-w-7xl mx-auto">
+            <div className="bg-slate-900 rounded-[3rem] overflow-hidden flex flex-col lg:flex-row items-center shadow-2xl">
+              <div className="flex-1 p-12 lg:p-20 space-y-8">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 text-amber-500 text-sm font-bold">
+                  <GraduationCap className="h-4 w-4" />
+                  Conviértete en Instructor
+                </div>
+                <h2 className="text-3xl lg:text-5xl font-headline font-bold text-white">
+                  {t.home.instructorSection.title}
+                </h2>
+                <p className="text-slate-400 text-lg leading-relaxed">
+                  {t.home.instructorSection.subtitle}
+                </p>
+                <ul className="space-y-4">
+                  {[
+                    t.home.instructorSection.benefit1,
+                    t.home.instructorSection.benefit2,
+                    t.home.instructorSection.benefit3
+                  ].map((benefit, i) => (
+                    <li key={i} className="flex items-center gap-3 text-white font-medium">
+                      <div className="bg-emerald-500/20 p-1 rounded-full">
+                        <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                      </div>
+                      {benefit}
+                    </li>
+                  ))}
+                </ul>
+                <Link href="/instructor/apply">
+                  <Button size="lg" className="h-14 px-10 text-lg font-bold rounded-full bg-primary hover:bg-primary/90 mt-4 shadow-xl shadow-primary/20">
+                    {t.home.instructorSection.btn}
+                  </Button>
+                </Link>
+              </div>
+              <div className="flex-1 relative w-full aspect-square lg:aspect-auto h-full min-h-[400px]">
+                <Image 
+                  src="https://picsum.photos/seed/instructor/800/800" 
+                  alt="Instructor" 
+                  fill 
+                  className="object-cover opacity-60 grayscale hover:grayscale-0 transition-all duration-700"
+                  data-ai-hint="instructor teacher"
+                />
+              </div>
+            </div>
           </div>
         </section>
 

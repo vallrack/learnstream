@@ -40,6 +40,14 @@ export const en = {
       subtitle: "Choose from our most popular free and premium courses.",
       viewAll: "See all courses →"
     },
+    instructorSection: {
+      title: "Are you an expert in your field?",
+      subtitle: "Join our community of instructors and monetize your knowledge by sharing what you know with thousands of students.",
+      benefit1: "Earn 70% of every sale generated",
+      benefit2: "AI tools to evaluate coding challenges",
+      benefit3: "Boost your personal brand in the industry",
+      btn: "Start teaching today"
+    },
     ctaTitle: "Ready to boost your career?",
     ctaSubtitle: "Get unlimited access to all courses, projects, and our exclusive AI features with a premium subscription.",
     ctaBtn: "Get Unlimited Access"
