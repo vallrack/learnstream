@@ -105,13 +105,18 @@ export default function AdminCoursesPage() {
     }
   };
 
-  // Función para convertir links de Google Drive a links directos de imagen
+  // Función robusta para convertir links de Google Drive a links directos de imagen
   const handleUrlChange = (val: string) => {
     let finalUrl = val;
     if (val.includes('drive.google.com')) {
-      const match = val.match(/\/d\/([a-zA-Z0-9-_]+)/);
-      if (match && match[1]) {
-        finalUrl = `https://drive.google.com/uc?export=view&id=${match[1]}`;
+      // Intentar extraer el ID usando diferentes patrones comunes
+      const dMatch = val.match(/\/d\/([a-zA-Z0-9-_]+)/);
+      const idMatch = val.match(/[?&]id=([a-zA-Z0-9-_]+)/);
+      
+      const driveId = (dMatch && dMatch[1]) || (idMatch && idMatch[1]);
+      
+      if (driveId) {
+        finalUrl = `https://drive.google.com/uc?export=view&id=${driveId}`;
       }
     }
     setImageUrl(finalUrl);
