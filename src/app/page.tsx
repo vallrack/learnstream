@@ -18,7 +18,7 @@ export default function Home() {
   const logoUrl = "https://drive.google.com/uc?export=view&id=16eSjcZhzvz1dGapFrNVFXSQ_kG4dyg0i";
   const instructorImageUrl = "https://lh3.googleusercontent.com/d/1FujdqLfrqmCYNzP-TfuGlO9SKaBN8HIh";
 
-  // Verificación de acceso administrativo para mostrar placeholders
+  // Verificación de acceso administrativo
   const profileRef = useMemoFirebase(() => {
     if (!db || !user?.uid) return null;
     return doc(db, 'users', user.uid);
@@ -37,8 +37,9 @@ export default function Home() {
 
   const { data: featuredCourses, isLoading } = useCollection(coursesQuery);
 
-  // Lógica de visibilidad: Mostrar la sección si está cargando, si hay cursos, o si el usuario es admin/instructor
-  const shouldShowCoursesSection = isLoading || (featuredCourses && featuredCourses.length > 0) || hasManagementAccess;
+  // Lógica de visibilidad corregida: Solo mostrar la sección si hay cursos o está cargando.
+  // El estado vacío con botón de admin se quita del Home para mantenerlo profesional.
+  const shouldShowCoursesSection = isLoading || (featuredCourses && featuredCourses.length > 0);
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -139,21 +140,11 @@ export default function Home() {
                     <div key={i} className="aspect-video bg-muted animate-pulse rounded-[2.5rem]" />
                   ))}
                 </div>
-              ) : featuredCourses && featuredCourses.length > 0 ? (
+              ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-                  {featuredCourses.map(course => (
+                  {featuredCourses?.map(course => (
                     <CourseCard key={course.id} course={course} />
                   ))}
-                </div>
-              ) : (
-                <div className="text-center py-20 bg-white rounded-[3rem] border-4 border-dashed max-w-2xl mx-auto flex flex-col items-center gap-4">
-                  < BookOpen className="h-12 w-12 text-muted-foreground opacity-20" />
-                  <p className="text-muted-foreground font-medium">Estamos preparando contenido increíble para ti.</p>
-                  {hasManagementAccess && (
-                    <Link href="/admin">
-                      <Button variant="outline">Crear primer curso</Button>
-                    </Link>
-                  )}
                 </div>
               )}
             </div>
