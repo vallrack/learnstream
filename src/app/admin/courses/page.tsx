@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Navbar } from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
-import { Plus, Edit, Trash2, BookOpen, Loader2, Calendar as CalendarIcon, Clock, Users, Eye } from 'lucide-react';
+import { Plus, Edit, Trash2, BookOpen, Loader2, Calendar as CalendarIcon, Clock, Users, Eye, Upload, Image as ImageIcon, X } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { useCollection, useFirestore, useUser, useDoc, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
@@ -17,6 +17,7 @@ import { TECH_STACK } from '@/lib/languages';
 import Link from 'next/link';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import Image from 'next/image';
 
 export default function AdminCoursesPage() {
   const { user } = useUser();
@@ -97,6 +98,17 @@ export default function AdminCoursesPage() {
     setIsDialogOpen(true);
   };
 
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImageUrl(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!db || !user || !profile) return;
@@ -110,7 +122,7 @@ export default function AdminCoursesPage() {
       isActive,
       previewVideoUrl,
       updatedAt: serverTimestamp(),
-      instructorName: profile.displayName || user.displayName || user.email // Sincronizamos siempre el nombre
+      instructorName: profile.displayName || user.displayName || user.email 
     };
 
     if (closingDate) {
@@ -143,7 +155,7 @@ export default function AdminCoursesPage() {
   };
 
   const handleDeleteCourse = (courseId: string) => {
-    if (!db || !isAdmin) return; // Solo el administrador puede borrar permanentemente
+    if (!db || !isAdmin) return; 
     if (confirm('¿Eliminar curso permanentemente?')) {
       deleteDocumentNonBlocking(doc(db, 'courses', courseId));
     }
@@ -193,74 +205,120 @@ export default function AdminCoursesPage() {
                   Crear Curso
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-[650px] rounded-3xl max-h-[90vh] overflow-y-auto">
+              <DialogContent className="sm:max-w-[750px] rounded-3xl max-h-[90vh] overflow-y-auto">
                 <form onSubmit={handleFormSubmit}>
                   <DialogHeader>
-                    <DialogTitle>{editingCourseId ? 'Editar Curso' : 'Nuevo Curso'}</DialogTitle>
+                    <DialogTitle className="text-2xl font-headline">{editingCourseId ? 'Editar Curso' : 'Nuevo Curso'}</DialogTitle>
                     <DialogDescription>
-                      Define el contenido y la vigencia del programa.
+                      Define el contenido, imagen de portada y vigencia del programa.
                     </DialogDescription>
                   </DialogHeader>
-                  <div className="grid gap-6 py-6">
-                    <div className="grid grid-cols-2 gap-4">
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8 py-6">
+                    <div className="space-y-6">
                       <div className="grid gap-2">
-                        <Label>Título</Label>
-                        <Input value={title} onChange={(e) => setTitle(e.target.value)} required className="rounded-xl h-11" />
+                        <Label className="font-bold">Título del Curso</Label>
+                        <Input value={title} onChange={(e) => setTitle(e.target.value)} required className="rounded-xl h-11" placeholder="Ej: Master en React Pro" />
                       </div>
-                      <div className="grid gap-2">
-                        <Label>Categoría</Label>
-                        <Input value={category} onChange={(e) => setCategory(e.target.value)} required className="rounded-xl h-11" />
+                      
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="grid gap-2">
+                          <Label className="font-bold">Categoría</Label>
+                          <Input value={category} onChange={(e) => setCategory(e.target.value)} required className="rounded-xl h-11" placeholder="Ej: Frontend" />
+                        </div>
+                        <div className="grid gap-2">
+                          <Label className="font-bold">Tecnología</Label>
+                          <Select value={technology} onValueChange={setTechnology}>
+                            <SelectTrigger className="rounded-xl h-11"><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
+                            <SelectContent className="max-h-[300px]">
+                              {Object.entries(TECH_STACK).map(([cat, subgroups]) => (
+                                <SelectGroup key={cat}>
+                                  <SelectLabel className="bg-muted/50 py-1.5">{cat}</SelectLabel>
+                                  {Array.isArray(subgroups) 
+                                    ? subgroups.map(tech => <SelectItem key={tech} value={tech}>{tech}</SelectItem>)
+                                    : Object.entries(subgroups).map(([sub, techs]) => 
+                                        techs.map(tech => <SelectItem key={tech} value={tech}>{tech}</SelectItem>)
+                                      )
+                                  }
+                                </SelectGroup>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </div>
-                    </div>
 
-                    <div className="grid grid-cols-2 gap-4">
                       <div className="grid gap-2">
-                        <Label>Tecnología</Label>
-                        <Select value={technology} onValueChange={setTechnology}>
-                          <SelectTrigger className="rounded-xl h-11"><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
-                          <SelectContent className="max-h-[300px]">
-                            {Object.entries(TECH_STACK).map(([cat, subgroups]) => (
-                              <SelectGroup key={cat}>
-                                <SelectLabel className="bg-muted/50 py-1.5">{cat}</SelectLabel>
-                                {Array.isArray(subgroups) 
-                                  ? subgroups.map(tech => <SelectItem key={tech} value={tech}>{tech}</SelectItem>)
-                                  : Object.entries(subgroups).map(([sub, techs]) => 
-                                      techs.map(tech => <SelectItem key={tech} value={tech}>{tech}</SelectItem>)
-                                    )
-                                }
-                              </SelectGroup>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="grid gap-2">
-                        <Label>Fecha de Cierre (Inactivación)</Label>
+                        <Label className="font-bold">Fecha de Cierre (Inactivación)</Label>
                         <div className="relative">
                           <CalendarIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                           <Input type="date" value={closingDate} onChange={(e) => setClosingDate(e.target.value)} className="rounded-xl h-11 pl-10" />
                         </div>
                       </div>
-                    </div>
 
-                    <div className="grid gap-2">
-                      <Label>Descripción</Label>
-                      <Textarea value={description} onChange={(e) => setDescription(e.target.value)} required className="rounded-xl min-h-[100px]" />
-                    </div>
-
-                    <div className="flex gap-6 items-center">
-                      <div className="flex items-center space-x-2">
-                        <input type="checkbox" id="isFree" checked={isFree} onChange={(e) => setIsFree(e.target.checked)} className="h-4 w-4 rounded border-gray-300 text-primary" />
-                        <Label htmlFor="isFree">Curso Gratuito</Label>
+                      <div className="grid gap-2">
+                        <Label className="font-bold">Descripción del Programa</Label>
+                        <Textarea value={description} onChange={(e) => setDescription(e.target.value)} required className="rounded-xl min-h-[120px] resize-none" placeholder="Explica los objetivos del curso..." />
                       </div>
-                      <div className="flex items-center space-x-2">
-                        <input type="checkbox" id="isActive" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} className="h-4 w-4 rounded border-gray-300 text-primary" />
-                        <Label htmlFor="isActive">Publicado</Label>
+                    </div>
+
+                    <div className="space-y-6">
+                      <div className="grid gap-2">
+                        <Label className="font-bold">Imagen de Portada</Label>
+                        <div className="relative group">
+                          <div className={`aspect-video rounded-2xl border-2 border-dashed flex flex-col items-center justify-center overflow-hidden transition-colors ${imageUrl ? 'border-primary/20 bg-primary/5' : 'border-slate-200 bg-slate-50'}`}>
+                            {imageUrl ? (
+                              <>
+                                <Image src={imageUrl} alt="Preview" fill className="object-cover" unoptimized />
+                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                                  <Label htmlFor="course-image" className="cursor-pointer bg-white text-slate-900 px-4 py-2 rounded-xl text-xs font-bold hover:bg-slate-100 flex items-center gap-2">
+                                    <Upload className="h-3 w-3" /> Cambiar
+                                  </Label>
+                                  <Button variant="destructive" size="sm" className="rounded-xl h-8 px-3" onClick={() => setImageUrl('')}>
+                                    <X className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              </>
+                            ) : (
+                              <div className="flex flex-col items-center gap-2 p-6 text-center">
+                                <div className="bg-white p-3 rounded-2xl shadow-sm"><ImageIcon className="h-6 w-6 text-slate-400" /></div>
+                                <div>
+                                  <p className="text-xs font-bold text-slate-600">Sube una imagen (16:9)</p>
+                                  <p className="text-[10px] text-muted-foreground">PNG, JPG o WEBP</p>
+                                </div>
+                                <Label htmlFor="course-image" className="mt-2 cursor-pointer bg-primary text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-primary/90">
+                                  Seleccionar Archivo
+                                </Label>
+                              </div>
+                            )}
+                          </div>
+                          <input id="course-image" type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
+                        </div>
+                      </div>
+
+                      <div className="grid gap-2">
+                        <Label className="font-bold">URL Video Introducción (YouTube)</Label>
+                        <Input value={previewVideoUrl} onChange={(e) => setPreviewVideoUrl(e.target.value)} className="rounded-xl h-11" placeholder="https://youtube.com/watch?v=..." />
+                      </div>
+
+                      <div className="bg-slate-50 p-4 rounded-2xl border space-y-4">
+                        <p className="text-xs font-bold uppercase tracking-widest text-slate-500">Ajustes de Publicación</p>
+                        <div className="flex flex-col gap-3">
+                          <div className="flex items-center justify-between p-2 bg-white rounded-xl border shadow-sm">
+                            <Label htmlFor="isFree" className="text-sm font-medium cursor-pointer">Curso Gratuito</Label>
+                            <input type="checkbox" id="isFree" checked={isFree} onChange={(e) => setIsFree(e.target.checked)} className="h-5 w-5 rounded border-slate-300 text-primary focus:ring-primary" />
+                          </div>
+                          <div className="flex items-center justify-between p-2 bg-white rounded-xl border shadow-sm">
+                            <Label htmlFor="isActive" className="text-sm font-medium cursor-pointer">Publicar Inmediatamente</Label>
+                            <input type="checkbox" id="isActive" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} className="h-5 w-5 rounded border-slate-300 text-primary focus:ring-primary" />
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
-                  <DialogFooter>
-                    <Button type="submit" className="w-full rounded-2xl h-14 text-lg font-bold">
-                      {editingCourseId ? 'Guardar Cambios' : 'Publicar Curso'}
+
+                  <DialogFooter className="pt-4 border-t">
+                    <Button type="submit" className="w-full rounded-2xl h-14 text-lg font-bold shadow-xl shadow-primary/20">
+                      {editingCourseId ? 'Guardar Cambios en el Curso' : 'Publicar Nuevo Programa'}
                     </Button>
                   </DialogFooter>
                 </form>
@@ -283,14 +341,18 @@ export default function AdminCoursesPage() {
             <TableBody>
               {courses?.map(course => {
                 const cDate = course.closingDate && (course.closingDate instanceof Timestamp ? course.closingDate.toDate() : new Date(course.closingDate));
-                const isExpired = cDate && now && cDate < now;
                 
                 return (
                   <TableRow key={course.id} className="border-slate-100">
                     <TableCell className="font-bold pl-8 py-5">
-                      <div className="flex flex-col">
-                        <span>{course.title}</span>
-                        <span className="text-[10px] text-muted-foreground font-normal">{course.category}</span>
+                      <div className="flex items-center gap-4">
+                        <div className="relative h-12 w-20 rounded-lg overflow-hidden border bg-slate-100 shrink-0">
+                          <Image src={course.thumbnailDataUrl || course.imageUrl || 'https://picsum.photos/seed/c/200/150'} alt={course.title} fill className="object-cover" unoptimized />
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="line-clamp-1">{course.title}</span>
+                          <span className="text-[10px] text-muted-foreground font-normal">{course.category}</span>
+                        </div>
                       </div>
                     </TableCell>
                     <TableCell>
@@ -303,7 +365,7 @@ export default function AdminCoursesPage() {
                         <Avatar className="h-6 w-6 border">
                           <AvatarFallback className="text-[8px] font-bold bg-slate-100 text-slate-600 uppercase">{course.instructorName?.[0] || '?'}</AvatarFallback>
                         </Avatar>
-                        <span className="text-xs font-medium text-slate-600">{course.instructorName || 'Experto'}</span>
+                        <span className="text-xs font-medium text-slate-600 truncate max-w-[100px]">{course.instructorName || 'Experto'}</span>
                       </div>
                     </TableCell>
                     <TableCell>

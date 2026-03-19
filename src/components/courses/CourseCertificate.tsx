@@ -3,7 +3,7 @@
 import React from 'react';
 import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
-import { Crown, ShieldCheck, Award, Calendar } from 'lucide-react';
+import { Crown, ShieldCheck, Award, Calendar, User } from 'lucide-react';
 
 interface CourseCertificateProps {
   studentName: string;
@@ -12,6 +12,7 @@ interface CourseCertificateProps {
   isPremium: boolean;
   completionDate: string;
   modulesCount: number;
+  instructorName?: string;
 }
 
 export function CourseCertificate({
@@ -21,6 +22,7 @@ export function CourseCertificate({
   isPremium,
   completionDate,
   modulesCount,
+  instructorName = "Experto LearnStream",
 }: CourseCertificateProps) {
   const logoUrl = "https://dprogramadores.com.co/img/logoD.png";
   const signatureUrl = "https://drive.google.com/uc?export=view&id=1w2nzR-tylvAKiHe02fzdTKpRD7icoJua";
@@ -97,6 +99,11 @@ export function CourseCertificate({
               )}
             </div>
           </div>
+        </div>
+
+        <div className="flex items-center gap-2 mt-2 px-4 py-1.5 bg-slate-50 rounded-full border border-slate-100">
+          <User className="h-3.5 w-3.5 text-slate-400" />
+          <span className="text-[11px] font-bold text-slate-600">Instructor a cargo: <span className="text-primary">{instructorName}</span></span>
         </div>
 
         <p className="text-[10px] text-slate-400 max-w-lg leading-relaxed px-4">

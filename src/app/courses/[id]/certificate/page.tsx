@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
@@ -131,6 +130,7 @@ function CertificateContent() {
                 isPremium={isPremium}
                 completionDate={completionDate}
                 modulesCount={modules?.length || 0}
+                instructorName={course?.instructorName}
               />
             </div>
           </div>
