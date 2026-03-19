@@ -10,11 +10,11 @@ export function CourseCard({ course }: { course: any }) {
   // Usamos thumbnailDataUrl como fuente principal de la imagen (Base64) o imageUrl (URL externa)
   const imageSrc = course.thumbnailDataUrl || course.imageUrl || 'https://picsum.photos/seed/course/800/450';
 
-  // Determinamos si debemos saltar la optimización de Next.js (necesario para Google Drive y Base64)
-  const isExternalOrData = 
-    imageSrc.startsWith('data:') || 
-    imageSrc.includes('drive.google.com') || 
-    imageSrc.includes('googleusercontent.com');
+  // Determinamos si debemos saltar la optimización de Next.js.
+  // Optimizar solo fuentes conocidas y confiables (Unsplash, Picsum, Placehold). 
+  // Todo lo demás (Drive, Base64, dominios externos) se sirve sin optimizar para evitar errores de configuración.
+  const isOptimizable = imageSrc.includes('images.unsplash.com') || imageSrc.includes('picsum.photos') || imageSrc.includes('placehold.co');
+  const shouldSkipOptimization = !isOptimizable || imageSrc.startsWith('data:');
 
   return (
     <Card className="overflow-hidden group hover:shadow-lg transition-all duration-300 border-border/50 flex flex-col h-full bg-card rounded-[2rem]">
@@ -25,7 +25,7 @@ export function CourseCard({ course }: { course: any }) {
             alt={course.title || 'Curso'}
             fill
             className="object-cover transition-transform duration-500 group-hover:scale-105"
-            unoptimized={isExternalOrData}
+            unoptimized={shouldSkipOptimization}
           />
           <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors" />
           {course.isFree ? (

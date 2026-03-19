@@ -89,7 +89,11 @@ export default function CourseDetailPage() {
   const isCompleted = progress?.status === 'completed';
   const isPremium = !!profile?.isPremiumSubscriber;
   const imageSrc = course.thumbnailDataUrl || course.imageUrl || 'https://picsum.photos/seed/course/800/450';
-  const isUnoptimized = imageSrc.startsWith('data:') || imageSrc.includes('drive.google.com') || imageSrc.includes('googleusercontent.com');
+  
+  // Lógica robusta para optimización de imágenes (Base64 y fuentes no listadas deben ser unoptimized)
+  const isOptimizable = imageSrc.includes('images.unsplash.com') || imageSrc.includes('picsum.photos') || imageSrc.includes('placehold.co');
+  const shouldSkipOptimization = !isOptimizable || imageSrc.startsWith('data:');
+
   const previewVideoUrl = course.previewVideoUrl || null;
 
   const closingDate = course.closingDate instanceof Timestamp ? course.closingDate.toDate() : (course.closingDate ? new Date(course.closingDate) : null);
@@ -231,7 +235,7 @@ export default function CourseDetailPage() {
                       alt={course.title}
                       fill
                       className="object-cover opacity-80"
-                      unoptimized={isUnoptimized}
+                      unoptimized={shouldSkipOptimization}
                     />
                     <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 group-hover:bg-black/20 transition-colors">
                       <Button 
