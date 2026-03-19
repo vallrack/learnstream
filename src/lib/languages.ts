@@ -1,5 +1,10 @@
 
 export const TECH_STACK = {
+  "Lógica y Fundamentos": {
+    "Herramientas de Aprendizaje": [
+      "PSeInt (Pseudocódigo)", "LPP (Lógica de Programación)", "Diagramas de Flujo", "Scratch"
+    ]
+  },
   "Lenguajes de Programación": {
     "Los Gigantes": [
       "JavaScript", "TypeScript", "Python", "Java", "Kotlin", "C#", "C", "C++", "Swift", "Objective-C", "PHP", "Ruby", "Go (Golang)"

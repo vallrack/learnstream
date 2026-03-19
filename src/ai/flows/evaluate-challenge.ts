@@ -41,7 +41,7 @@ const prompt = ai.definePrompt({
   input: {schema: EvaluateChallengeInputSchema},
   output: {schema: EvaluateChallengeOutputSchema},
   prompt: `Eres un experto revisor técnico y desarrollador senior. 
-Tu tarea es evaluar la entrega de un estudiante para un desafío de código o diseño.
+Tu tarea es evaluar la entrega de un estudiante para un desafío de código, diseño o lógica algorítmica.
 
 REGLA CRÍTICA: Todo el feedback debe estar escrito en ESPAÑOL.
 
@@ -59,11 +59,11 @@ Entrega del Estudiante:
 ---
 
 Criterios de Evaluación:
-1. Lógica y Correctitud: ¿El código resuelve el problema planteado?
-2. Mejores Prácticas: ¿Es código limpio, eficiente y sigue los patrones de {{{technology}}}?
-3. Estructura/Diseño: Si es UI, ¿la estructura tiene sentido para el objetivo?
+1. Lógica y Correctitud: ¿El código o algoritmo resuelve el problema planteado?
+2. Mejores Prácticas: ¿Es código limpio y sigue los patrones de {{{technology}}}?
+3. Si la tecnología es PSeInt o LPP: Enfócate en la lógica secuencial, condicionales y ciclos. No seas estricto con el lenguaje, sino con la resolución del problema lógico.
 
-Si el estudiante demuestra un dominio excepcional (puntaje 4.5 o más), inventa una "Insignia de Maestría" específica para la habilidad que demostró (ej: "Maestro de bucles", "Ninja de Funciones Asíncronas").
+Si el estudiante demuestra un dominio excepcional (puntaje 4.5 o más), inventa una "Insignia de Maestría" específica para la habilidad que demostró (ej: "Lógica de Hierro", "Ninja de Algoritmos").
 
 Proporciona una calificación del 0 al 5. Sé alentador pero riguroso. 
 Si el código está vacío o es irrelevante para el reto, califica con 0 o 1. 
