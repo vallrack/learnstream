@@ -17,22 +17,26 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
+      // Permitimos lectura pública para el Portfolio Profesional
+      allow get: if true; 
       allow create: if isOwner(userId);
-      allow get: if isOwner(userId) || isAdmin();
       allow list: if isAdmin();
       allow update: if isOwner(userId) || isAdmin();
       allow delete: if isAdmin();
 
       match /courseProgress/{courseId} {
-        allow read, write: if isOwner(userId) || isAdmin();
+        allow read: if isOwner(userId) || isAdmin(); // Privado, no sale en portfolio público
+        allow write: if isOwner(userId) || isAdmin();
       }
       
       match /challenge_submissions/{submissionId} {
-        allow read, write: if isOwner(userId) || isAdmin();
+        allow read: if true; // Público para el portfolio
+        allow write: if isOwner(userId) || isAdmin();
       }
 
       match /achievements/{achievementId} {
-        allow read, write: if isOwner(userId) || isAdmin();
+        allow read: if true; // Público para el portfolio
+        allow write: if isOwner(userId) || isAdmin();
       }
     }
 
