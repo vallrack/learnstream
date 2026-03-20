@@ -11,17 +11,17 @@ import {
   Code2, 
   Loader2, 
   Search, 
-  Filter, 
-  Info, 
-  Layout,
-  Terminal,
-  Eye,
-  EyeOff,
-  Gamepad2,
-  ListPlus,
-  X,
-  Lock,
-  Unlock
+  Gamepad2, 
+  ListPlus, 
+  X, 
+  Lock, 
+  Unlock, 
+  Eye, 
+  EyeOff, 
+  HelpCircle, 
+  MessageSquare,
+  Sparkles,
+  Terminal
 } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -60,6 +60,7 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { TECH_STACK } from '@/lib/languages';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Card, CardContent } from '@/components/ui/card';
 
 export default function AdminChallengesPage() {
   const { user } = useUser();
@@ -67,7 +68,6 @@ export default function AdminChallengesPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   
-  // Filtros
   const [searchTerm, setSearchTerm] = useState('');
   const [filterDifficulty, setFilterDifficulty] = useState('all');
 
@@ -83,14 +83,14 @@ export default function AdminChallengesPage() {
   const [description, setDescription] = useState('');
   const [difficulty, setDifficulty] = useState('Principiante');
   const [technology, setTechnology] = useState('');
-  const [challengeType, setChallengeType] = useState<'code' | 'wordsearch'>('code');
+  const [challengeType, setChallengeType] = useState<'code' | 'wordsearch' | 'quiz' | 'interview'>('code');
   const [words, setWords] = useState<string[]>([]);
   const [wordInput, setWordsInput] = useState('');
   const [initialCode, setInitialCode] = useState('');
   const [solution, setSolution] = useState('');
   const [isFree, setIsFree] = useState(true);
   const [visibility, setVisibility] = useState<'public' | 'private'>('public');
-  const [courseId, setCourseId] = useState<string>('none');
+  const [questions, setQuestions] = useState<any[]>([]);
 
   const challengesQuery = useMemoFirebase(() => {
     if (!db || !profile) return null;
@@ -116,14 +116,7 @@ export default function AdminChallengesPage() {
     setSolution('');
     setIsFree(true);
     setVisibility('public');
-    setCourseId('none');
-  };
-
-  const handleAddWord = () => {
-    if (wordInput.trim()) {
-      setWords([...words, wordInput.trim()]);
-      setWordsInput('');
-    }
+    setQuestions([]);
   };
 
   const handleEditClick = (challenge: any) => {
@@ -138,7 +131,7 @@ export default function AdminChallengesPage() {
     setSolution(challenge.solution || '');
     setIsFree(challenge.isFree ?? true);
     setVisibility(challenge.visibility || 'public');
-    setCourseId(challenge.courseId || 'none');
+    setQuestions(challenge.questions || []);
     setIsDialogOpen(true);
   };
 
@@ -153,11 +146,11 @@ export default function AdminChallengesPage() {
       technology,
       type: challengeType,
       words: challengeType === 'wordsearch' ? words : [],
+      questions: challengeType === 'quiz' ? questions : [],
       initialCode: challengeType === 'code' ? initialCode : '',
       solution,
       isFree,
       visibility,
-      courseId: visibility === 'private' ? (courseId === 'none' ? null : courseId) : null,
       updatedAt: serverTimestamp(),
     };
 
@@ -174,28 +167,9 @@ export default function AdminChallengesPage() {
     resetForm();
   };
 
-  const handleDelete = (id: string) => {
-    if (!db || !isAdmin) return;
-    if (confirm('¿Eliminar este desafío?')) {
-      deleteDocumentNonBlocking(doc(db, 'coding_challenges', id));
-    }
+  const addQuestion = () => {
+    setQuestions([...questions, { question: '', options: ['', '', '', ''], correctAnswer: 0 }]);
   };
-
-  const filteredChallenges = challenges?.filter(challenge => {
-    const matchesSearch = challenge.title?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          challenge.description?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesDifficulty = filterDifficulty === 'all' || challenge.difficulty === filterDifficulty;
-    return matchesSearch && matchesDifficulty;
-  }) || [];
-
-  const groupedChallenges = filteredChallenges.reduce((acc, challenge) => {
-    const tech = challenge.technology || 'Otros';
-    if (!acc[tech]) acc[tech] = [];
-    acc[tech].push(challenge);
-    return acc;
-  }, {} as Record<string, any[]>);
-
-  const techEntries = Object.entries(groupedChallenges).sort();
 
   return (
     <div className="min-h-screen bg-[#F8FAFC]">
@@ -205,10 +179,10 @@ export default function AdminChallengesPage() {
         <header className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-12">
           <div>
             <h1 className="text-4xl font-headline font-bold mb-2 flex items-center gap-3">
-              <Gamepad2 className="h-8 w-8 text-primary" />
-              Gestión de Desafíos
+              <Sparkles className="h-8 w-8 text-primary" />
+              Gestión de Actividades
             </h1>
-            <p className="text-muted-foreground">Crea retos de código o actividades interactivas para tus alumnos.</p>
+            <p className="text-muted-foreground">Crea retos interactivos, trivias o simulacros de entrevista.</p>
           </div>
           
           <Dialog open={isDialogOpen} onOpenChange={(open) => {
@@ -218,34 +192,33 @@ export default function AdminChallengesPage() {
             <DialogTrigger asChild>
               <Button className="rounded-xl h-11 gap-2 shadow-lg shadow-primary/10">
                 <Plus className="h-4 w-4" />
-                Nuevo Desafío
+                Nueva Actividad
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[900px] rounded-[2.5rem] max-h-[90vh] overflow-y-auto">
               <form onSubmit={handleFormSubmit}>
                 <DialogHeader>
-                  <DialogTitle className="text-2xl font-headline">{editingId ? 'Editar Desafío' : 'Crear Desafío'}</DialogTitle>
-                  <DialogDescription>
-                    Configura el formato y los parámetros de acceso para este reto.
-                  </DialogDescription>
+                  <DialogTitle className="text-2xl font-headline">{editingId ? 'Editar Actividad' : 'Nueva Actividad'}</DialogTitle>
+                  <DialogDescription>Configura el formato y los parámetros de acceso.</DialogDescription>
                 </DialogHeader>
+                
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-10 py-8">
                   <div className="space-y-6">
                     <div className="grid gap-2">
-                      <Label className="font-bold">Título del Reto</Label>
-                      <Input value={title} onChange={(e) => setTitle(e.target.value)} required placeholder="Ej: Vocabulario de Variables" className="rounded-xl h-11" />
+                      <Label className="font-bold">Título</Label>
+                      <Input value={title} onChange={(e) => setTitle(e.target.value)} required placeholder="Ej: Entrevista: State Management" className="rounded-xl h-11" />
                     </div>
                     
                     <div className="grid grid-cols-2 gap-4">
                       <div className="grid gap-2">
-                        <Label className="font-bold">Tipo de Desafío</Label>
+                        <Label className="font-bold">Tipo</Label>
                         <Select value={challengeType} onValueChange={(v: any) => setChallengeType(v)}>
-                          <SelectTrigger className="rounded-xl h-11">
-                            <SelectValue />
-                          </SelectTrigger>
+                          <SelectTrigger className="rounded-xl h-11"><SelectValue /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="code">Editor de Código</SelectItem>
                             <SelectItem value="wordsearch">Sopa de Letras</SelectItem>
+                            <SelectItem value="quiz">Trivia (Cuestionario)</SelectItem>
+                            <SelectItem value="interview">Simulacro Entrevista</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -262,76 +235,37 @@ export default function AdminChallengesPage() {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="grid gap-2">
-                        <Label className="font-bold">Tecnología Requerida</Label>
-                        <Select value={technology} onValueChange={setTechnology}>
-                          <SelectTrigger className="rounded-xl h-11"><SelectValue placeholder="Lenguaje..." /></SelectTrigger>
-                          <SelectContent className="max-h-[300px]">
-                            {Object.entries(TECH_STACK).map(([category, subgroups]) => (
-                              <SelectGroup key={category}>
-                                <SelectLabel className="bg-muted/50 py-1.5">{category}</SelectLabel>
-                                {Array.isArray(subgroups) 
-                                  ? subgroups.map(tech => <SelectItem key={tech} value={tech}>{tech}</SelectItem>)
-                                  : Object.entries(subgroups).map(([sub, techs]) => (
-                                      <div key={sub} className="px-2">
-                                        <p className="text-[10px] uppercase font-bold text-muted-foreground mt-2 mb-1 pl-2">{sub}</p>
-                                        {techs.map(tech => <SelectItem key={tech} value={tech}>{tech}</SelectItem>)}
-                                      </div>
-                                    ))
-                                }
-                              </SelectGroup>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="grid gap-2">
-                        <Label className="font-bold">Visibilidad</Label>
-                        <Select value={visibility} onValueChange={(v: any) => setVisibility(v)}>
-                          <SelectTrigger className="rounded-xl h-11"><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="public">Público (Catálogo)</SelectItem>
-                            <SelectItem value="private">Privado (Solo Curso)</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-
                     <div className="bg-slate-50 p-4 rounded-2xl border space-y-4">
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Acceso Comercial</p>
                       <div className="flex items-center justify-between p-2 bg-white rounded-xl border shadow-sm">
                         <div className="flex items-center gap-2">
                           {isFree ? <Unlock className="h-4 w-4 text-emerald-500" /> : <Lock className="h-4 w-4 text-amber-500" />}
-                          <Label htmlFor="challenge-free" className="text-sm font-bold cursor-pointer">Contenido Gratuito</Label>
+                          <Label htmlFor="ch-free" className="text-sm font-bold">Actividad Gratuita</Label>
                         </div>
-                        <Switch id="challenge-free" checked={isFree} onCheckedChange={setIsFree} />
+                        <Switch id="ch-free" checked={isFree} onCheckedChange={setIsFree} />
                       </div>
-                      <p className="text-[10px] text-muted-foreground leading-relaxed">
-                        {isFree ? 'Cualquier estudiante registrado puede realizar este reto.' : 'Solo estudiantes con membresía Premium pueden acceder.'}
-                      </p>
                     </div>
 
                     <div className="grid gap-2">
-                      <Label className="font-bold">Enunciado / Instrucciones</Label>
+                      <Label className="font-bold">Instrucciones / Contexto</Label>
                       <Textarea 
                         value={description} 
                         onChange={(e) => setDescription(e.target.value)} 
                         className="min-h-[120px] rounded-2xl resize-none" 
-                        placeholder="Explica qué debe resolver el estudiante..." 
+                        placeholder="Explica el objetivo de esta actividad..." 
                       />
                     </div>
                   </div>
                   
                   <div className="space-y-8 bg-muted/20 p-6 rounded-[2rem] border">
-                    {challengeType === 'code' ? (
+                    {challengeType === 'code' || challengeType === 'interview' ? (
                       <>
                         <div className="grid gap-3">
-                          <Label className="font-bold">Código Inicial (Plantilla)</Label>
+                          <Label className="font-bold">{challengeType === 'code' ? 'Código Inicial' : 'Placeholder de Respuesta'}</Label>
                           <Textarea 
                             value={initialCode} 
                             onChange={(e) => setInitialCode(e.target.value)} 
                             className="font-mono text-[11px] min-h-[180px] rounded-2xl bg-white border-dashed" 
-                            placeholder={"function solution() {\n  // Escribe aquí...\n}"} 
+                            placeholder={challengeType === 'code' ? "function solution() { ... }" : "Escribe tu respuesta aquí..."} 
                           />
                         </div>
                         <div className="grid gap-3">
@@ -340,44 +274,49 @@ export default function AdminChallengesPage() {
                             value={solution} 
                             onChange={(e) => setSolution(e.target.value)} 
                             className="font-mono text-[11px] min-h-[120px] rounded-2xl border-emerald-200 bg-emerald-50/20" 
-                            placeholder="Solución esperada para que la IA califique..." 
+                            placeholder="Qué espera la IA encontrar en la respuesta..." 
                           />
                         </div>
                       </>
-                    ) : (
+                    ) : challengeType === 'wordsearch' ? (
                       <div className="space-y-6">
                         <div className="grid gap-3">
-                          <Label className="font-bold flex items-center gap-2">
-                            <ListPlus className="h-4 w-4 text-primary" />
-                            Palabras para la Sopa
-                          </Label>
+                          <Label className="font-bold">Palabras Clave</Label>
                           <div className="flex gap-2">
-                            <Input 
-                              value={wordInput} 
-                              onChange={(e) => setWordsInput(e.target.value)} 
-                              onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddWord())}
-                              placeholder="Ej: STRING" 
-                              className="rounded-xl h-11 bg-white"
-                            />
-                            <Button type="button" onClick={handleAddWord} className="rounded-xl h-11">Añadir</Button>
+                            <Input value={wordInput} onChange={(e) => setWordsInput(e.target.value)} placeholder="Ej: HOOKS" className="rounded-xl h-11 bg-white" />
+                            <Button type="button" onClick={() => { if(wordInput) setWords([...words, wordInput.toUpperCase()]); setWordsInput(''); }} className="rounded-xl h-11">Añadir</Button>
                           </div>
                           <div className="flex flex-wrap gap-2 mt-2">
                             {words.map((w, i) => (
-                              <Badge key={i} className="rounded-lg bg-white border-slate-200 text-slate-700 py-1.5 gap-2 group">
-                                {w}
-                                <X className="h-3 w-3 cursor-pointer text-slate-400 hover:text-rose-500" onClick={() => setWords(words.filter((_, idx) => idx !== i))} />
+                              <Badge key={i} className="rounded-lg bg-white border-slate-200 text-slate-700 py-1.5 gap-2">
+                                {w} <X className="h-3 w-3 cursor-pointer" onClick={() => setWords(words.filter((_, idx) => idx !== i))} />
                               </Badge>
                             ))}
                           </div>
                         </div>
-                        <div className="grid gap-3">
-                          <Label className="font-bold text-emerald-600">Referencia IA (Contexto)</Label>
-                          <Textarea 
-                            value={solution} 
-                            onChange={(e) => setSolution(e.target.value)} 
-                            className="font-mono text-[11px] min-h-[120px] rounded-2xl border-emerald-200 bg-emerald-50/20" 
-                            placeholder="Ej: Estas palabras son tipos de datos en JS..." 
-                          />
+                      </div>
+                    ) : (
+                      <div className="space-y-6">
+                        <div className="flex items-center justify-between">
+                          <Label className="font-bold">Preguntas de la Trivia</Label>
+                          <Button type="button" onClick={addQuestion} variant="outline" size="sm" className="rounded-xl h-8"><Plus className="h-3 w-3 mr-1"/> Añadir</Button>
+                        </div>
+                        <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
+                          {questions.map((q, qIdx) => (
+                            <Card key={qIdx} className="rounded-xl border-slate-200">
+                              <CardContent className="p-4 space-y-3">
+                                <Input placeholder="Pregunta..." value={q.question} onChange={(e) => { const n = [...questions]; n[qIdx].question = e.target.value; setQuestions(n); }} className="h-8 text-xs font-bold" />
+                                <div className="grid grid-cols-2 gap-2">
+                                  {q.options.map((opt: string, oIdx: number) => (
+                                    <div key={oIdx} className="flex items-center gap-1">
+                                      <input type="radio" checked={q.correctAnswer === oIdx} onChange={() => { const n = [...questions]; n[qIdx].correctAnswer = oIdx; setQuestions(n); }} />
+                                      <Input value={opt} onChange={(e) => { const n = [...questions]; n[qIdx].options[oIdx] = e.target.value; setQuestions(n); }} className="h-7 text-[10px]" />
+                                    </div>
+                                  ))}
+                                </div>
+                              </CardContent>
+                            </Card>
+                          ))}
                         </div>
                       </div>
                     )}
@@ -385,7 +324,7 @@ export default function AdminChallengesPage() {
                 </div>
                 <DialogFooter>
                   <Button type="submit" className="w-full rounded-2xl h-14 text-lg font-bold shadow-xl shadow-primary/20">
-                    {editingId ? 'Actualizar Desafío' : 'Publicar Desafío'}
+                    {editingId ? 'Guardar Cambios' : 'Publicar Actividad'}
                   </Button>
                 </DialogFooter>
               </form>
@@ -393,118 +332,37 @@ export default function AdminChallengesPage() {
           </Dialog>
         </header>
 
-        <section className="bg-white p-6 rounded-[2rem] border shadow-sm mb-8 flex flex-col md:flex-row gap-4 items-end">
-          <div className="flex-1 w-full space-y-2">
-            <Label className="text-xs font-bold uppercase text-muted-foreground ml-1">Buscar</Label>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input 
-                placeholder="Nombre del desafío..." 
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 rounded-xl h-11" 
-              />
-            </div>
-          </div>
-          <div className="w-full md:w-48 space-y-2">
-            <Label className="text-xs font-bold uppercase text-muted-foreground ml-1">Dificultad</Label>
-            <Select value={filterDifficulty} onValueChange={setFilterDifficulty}>
-              <SelectTrigger className="rounded-xl h-11">
-                <SelectValue placeholder="Todas" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas</SelectItem>
-                <SelectItem value="Principiante">Principiante</SelectItem>
-                <SelectItem value="Intermedio">Intermedio</SelectItem>
-                <SelectItem value="Avanzado">Avanzado</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </section>
-
-        <div className="space-y-4">
-          {isChallengesLoading ? (
-            <div className="p-20 flex flex-col items-center justify-center gap-4 bg-white rounded-[2rem] border">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              <p className="text-muted-foreground">Cargando desafíos...</p>
-            </div>
-          ) : techEntries.length > 0 ? (
-            <Accordion type="multiple" className="space-y-4">
-              {techEntries.map(([tech, techChallenges]) => (
-                <AccordionItem key={tech} value={tech} className="bg-white border rounded-[2rem] overflow-hidden px-6 shadow-sm">
-                  <AccordionTrigger className="hover:no-underline py-6">
-                    <div className="flex items-center gap-4 text-left">
-                      <div className="bg-primary/10 p-2.5 rounded-2xl">
-                        <Terminal className="h-5 w-5 text-primary" />
-                      </div>
-                      <div>
-                        <h2 className="text-xl font-headline font-bold">{tech}</h2>
-                        <p className="text-xs text-muted-foreground">{techChallenges.length} {techChallenges.length === 1 ? 'desafío' : 'desafíos'}</p>
-                      </div>
+        <div className="bg-white rounded-[2.5rem] border shadow-sm overflow-hidden">
+          <Table>
+            <TableHeader><TableRow className="bg-slate-50"><TableHead className="pl-8">Actividad</TableHead><TableHead>Tipo</TableHead><TableHead>Acceso</TableHead><TableHead className="text-right pr-8">Acciones</TableHead></TableRow></TableHeader>
+            <TableBody>
+              {challenges?.map(c => (
+                <TableRow key={c.id}>
+                  <TableCell className="pl-8 py-4">
+                    <div className="flex flex-col">
+                      <span className="font-bold text-slate-900">{c.title}</span>
+                      <span className="text-[10px] text-muted-foreground uppercase font-bold">{c.technology}</span>
                     </div>
-                  </AccordionTrigger>
-                  <AccordionContent className="pb-6 border-t pt-4">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="border-none hover:bg-transparent">
-                          <TableHead className="w-[40%]">Título</TableHead>
-                          <TableHead>Acceso</TableHead>
-                          <TableHead>Visibilidad</TableHead>
-                          <TableHead className="text-right pr-4">Acciones</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {techChallenges.map(challenge => (
-                          <TableRow key={challenge.id} className="group hover:bg-muted/10 border-muted/20">
-                            <TableCell className="font-bold py-4">
-                              <div className="flex flex-col">
-                                <span>{challenge.title}</span>
-                                <Badge variant="secondary" className="w-fit text-[9px] h-4 mt-1">{challenge.difficulty}</Badge>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              {challenge.isFree ? (
-                                <Badge className="bg-emerald-50 text-emerald-700 border-emerald-100 gap-1 rounded-lg">
-                                  <Unlock className="h-3 w-3" /> Libre
-                                </Badge>
-                              ) : (
-                                <Badge className="bg-amber-100 text-amber-700 border-amber-200 gap-1 rounded-lg">
-                                  <Lock className="h-3 w-3" /> Premium
-                                </Badge>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              {challenge.visibility === 'private' ? (
-                                <Badge variant="outline" className="text-amber-600 border-amber-200"><EyeOff className="h-3 w-3 mr-1" /> Privado</Badge>
-                              ) : (
-                                <Badge variant="outline" className="text-emerald-600 border-emerald-200"><Eye className="h-3 w-3 mr-1" /> Público</Badge>
-                              )}
-                            </TableCell>
-                            <TableCell className="text-right pr-4">
-                              <div className="flex items-center justify-end gap-1">
-                                <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl" onClick={() => handleEditClick(challenge)}>
-                                  <Edit className="h-4 w-4" />
-                                </Button>
-                                {isAdmin && (
-                                  <Button variant="ghost" size="icon" className="h-10 w-10 text-destructive rounded-xl hover:bg-destructive/10" onClick={() => handleDelete(challenge.id)}>
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                )}
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </AccordionContent>
-                </AccordionItem>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="secondary" className="rounded-lg gap-1.5">
+                      {c.type === 'quiz' ? <HelpCircle className="h-3 w-3" /> : c.type === 'interview' ? <MessageSquare className="h-3 w-3" /> : c.type === 'wordsearch' ? <Gamepad2 className="h-3 w-3" /> : <Terminal className="h-3 w-3" />}
+                      {c.type === 'quiz' ? 'Trivia' : c.type === 'interview' ? 'Entrevista' : c.type === 'wordsearch' ? 'Sopa Letras' : 'Código'}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    {c.isFree ? <Badge className="bg-emerald-50 text-emerald-700 border-emerald-100">Gratis</Badge> : <Badge className="bg-amber-100 text-amber-700 border-amber-200">Premium</Badge>}
+                  </TableCell>
+                  <TableCell className="text-right pr-8">
+                    <div className="flex justify-end gap-1">
+                      <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl" onClick={() => handleEditClick(c)}><Edit className="h-4 w-4" /></Button>
+                      {isAdmin && <Button variant="ghost" size="icon" className="h-9 w-9 text-destructive hover:bg-destructive/10 rounded-xl" onClick={() => deleteDocumentNonBlocking(doc(db, 'coding_challenges', c.id))}><Trash2 className="h-4 w-4" /></Button>}
+                    </div>
+                  </TableCell>
+                </TableRow>
               ))}
-            </Accordion>
-          ) : (
-            <div className="text-center py-20 bg-white rounded-[3rem] border-4 border-dashed max-w-2xl mx-auto">
-              <p className="text-muted-foreground font-medium">No se encontraron desafíos.</p>
-            </div>
-          )}
+            </TableBody>
+          </Table>
         </div>
       </main>
     </div>

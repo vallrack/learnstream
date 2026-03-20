@@ -23,12 +23,15 @@ import {
   BookOpen, 
   Gamepad2, 
   BrainCircuit,
-  ArrowRight
+  ArrowRight,
+  MessageSquare,
+  HelpCircle
 } from 'lucide-react';
-import { useDoc, useFirestore, useMemoFirebase, useUser, addDocumentNonBlocking, useCollection } from '@/firebase';
-import { doc, collection, serverTimestamp } from 'firebase/firestore';
+import { useDoc, useFirestore, useMemoFirebase, useUser, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
+import { doc, collection, serverTimestamp, increment } from 'firebase/firestore';
 import { evaluateChallenge, type EvaluateChallengeOutput } from '@/ai/flows/evaluate-challenge';
 import { WordSearchGame } from '@/components/challenges/WordSearchGame';
+import { QuizPlayer } from '@/components/challenges/QuizPlayer';
 import Link from 'next/link';
 
 export default function ChallengeExecutionPage() {
@@ -65,9 +68,20 @@ export default function ChallengeExecutionPage() {
     return !challenge.isFree && !profile?.isPremiumSubscriber;
   }, [challenge, profile]);
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (quizScore?: number) => {
     if (!challenge || !db || isPremiumLocked) return;
     
+    // Si es un quiz, generamos una respuesta de IA simulada basada en el puntaje
+    if (challenge.type === 'quiz' && quizScore !== undefined) {
+      processResult({
+        score: quizScore,
+        passed: quizScore >= 3,
+        feedback: quizScore >= 4 ? "Excelente dominio teórico de los conceptos." : "Buen intento, revisa los temas en los que fallaste.",
+        awardedBadge: quizScore >= 4.5 ? { title: "Teórico Maestro", description: "Dominio perfecto de la trivia.", iconType: "logic" } : undefined
+      });
+      return;
+    }
+
     setIsEvaluating(true);
     setResult(null);
     try {
@@ -78,31 +92,40 @@ export default function ChallengeExecutionPage() {
         studentCode: code,
         solutionReference: challenge.solution,
       });
-      setResult(evaluation);
-
-      if (user && !user.isAnonymous) {
-        addDocumentNonBlocking(collection(db, 'users', user.uid, 'challenge_submissions'), {
-          challengeId: challenge.id,
-          challengeTitle: challenge.title,
-          score: evaluation.score,
-          feedback: evaluation.feedback,
-          passed: evaluation.passed,
-          submittedAt: serverTimestamp()
-        });
-
-        if (evaluation.awardedBadge) {
-          addDocumentNonBlocking(collection(db, 'users', user.uid, 'achievements'), {
-            ...evaluation.awardedBadge,
-            challengeId: challenge.id,
-            unlockedAt: serverTimestamp(),
-          });
-          toast({ title: "¡Insignia Desbloqueada!", description: evaluation.awardedBadge.title });
-        }
-      }
+      processResult(evaluation);
     } catch (error) {
       toast({ variant: "destructive", title: "Error de IA", description: "No pudimos evaluar tu actividad." });
     } finally {
       setIsEvaluating(false);
+    }
+  };
+
+  const processResult = (evaluation: EvaluateChallengeOutput) => {
+    setResult(evaluation);
+
+    if (user && !user.isAnonymous) {
+      addDocumentNonBlocking(collection(db, 'users', user.uid, 'challenge_submissions'), {
+        challengeId: challenge!.id,
+        challengeTitle: challenge!.title,
+        score: evaluation.score,
+        feedback: evaluation.feedback,
+        passed: evaluation.passed,
+        submittedAt: serverTimestamp()
+      });
+
+      // Actualizar XP (50 por completar, 100 si pasa)
+      updateDocumentNonBlocking(doc(db, 'users', user.uid), {
+        xp: increment(evaluation.passed ? 150 : 50)
+      });
+
+      if (evaluation.awardedBadge) {
+        addDocumentNonBlocking(collection(db, 'users', user.uid, 'achievements'), {
+          ...evaluation.awardedBadge,
+          challengeId: challenge!.id,
+          unlockedAt: serverTimestamp(),
+        });
+        toast({ title: "¡Insignia Desbloqueada!", description: evaluation.awardedBadge.title });
+      }
     }
   };
 
@@ -118,8 +141,8 @@ export default function ChallengeExecutionPage() {
           <div className="w-24 h-24 bg-amber-100 rounded-[2.5rem] flex items-center justify-center mb-8 shadow-xl">
             <Lock className="h-10 w-10 text-amber-600" />
           </div>
-          <h1 className="text-4xl font-headline font-bold mb-4 text-slate-900">Reto Premium</h1>
-          <p className="text-muted-foreground max-w-md mb-10 text-lg">Este desafío requiere una suscripción activa para ser evaluado por IA.</p>
+          <h1 className="text-4xl font-headline font-bold mb-4 text-slate-900">Actividad Premium</h1>
+          <p className="text-muted-foreground max-w-md mb-10 text-lg">Este reto requiere una suscripción activa para ser evaluado por IA y otorgar XP.</p>
           <Link href="/checkout"><Button className="rounded-2xl h-14 px-10 font-bold bg-amber-500 hover:bg-amber-600">Mejorar a Premium</Button></Link>
         </main>
       </div>
@@ -127,8 +150,6 @@ export default function ChallengeExecutionPage() {
   }
 
   if (!challenge) return <div>No encontrado</div>;
-
-  const isInteractive = challenge.type === 'wordsearch';
 
   return (
     <div className="h-screen flex flex-col bg-[#F8FAFC] overflow-hidden">
@@ -150,7 +171,7 @@ export default function ChallengeExecutionPage() {
               <div className="space-y-4">
                 <h3 className="font-bold text-sm text-slate-900 flex items-center gap-2">
                   <BrainCircuit className="h-4 w-4 text-primary" />
-                  Tu Misión
+                  Contexto del Reto
                 </h3>
                 <p className="text-sm leading-relaxed text-slate-600 whitespace-pre-wrap">{challenge.description}</p>
               </div>
@@ -163,7 +184,7 @@ export default function ChallengeExecutionPage() {
                     <div className="flex items-center gap-4">
                       <div className="bg-white/20 p-3 rounded-2xl"><Medal className="h-10 w-10" /></div>
                       <div>
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-white/80">NUEVA INSIGNIA</p>
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-white/80">NUEVO LOGRO</p>
                         <h3 className="text-xl font-headline font-bold leading-tight">{result.awardedBadge.title}</h3>
                       </div>
                     </div>
@@ -181,44 +202,55 @@ export default function ChallengeExecutionPage() {
         <section className="flex-1 flex flex-col bg-slate-50 relative min-w-0">
           <div className="h-12 bg-white border-b flex items-center justify-between px-6 shrink-0">
             <div className="text-slate-500 text-[10px] font-bold uppercase tracking-widest flex items-center gap-2">
-              {isInteractive ? <Gamepad2 className="h-3 w-3" /> : <Terminal className="h-3 w-3" />}
-              {isInteractive ? 'Actividad Interactiva' : 'Editor de Código'}
+              {challenge.type === 'quiz' ? <HelpCircle className="h-3 w-3" /> : challenge.type === 'interview' ? <MessageSquare className="h-3 w-3" /> : challenge.type === 'wordsearch' ? <Gamepad2 className="h-3 w-3" /> : <Terminal className="h-3 w-3" />}
+              {challenge.type === 'quiz' ? 'Knowledge Battle' : challenge.type === 'interview' ? 'Simulador de Entrevista' : challenge.type === 'wordsearch' ? 'Sopa de Letras' : 'Editor de Código'}
             </div>
-            {(!isInteractive || isGameComplete) && (
-              <Button onClick={handleSubmit} disabled={isEvaluating || !code.trim()} className="h-8 rounded-lg bg-primary hover:bg-primary/90 text-xs font-bold gap-2">
-                {isEvaluating ? <Loader2 className="h-3 w-3 animate-spin" /> : <><Sparkles className="h-3 w-3" /> Enviar para Evaluación</>}
+            {challenge.type !== 'quiz' && (challenge.type !== 'wordsearch' || isGameComplete) && (
+              <Button onClick={() => handleSubmit()} disabled={isEvaluating || !code.trim()} className="h-8 rounded-lg bg-primary hover:bg-primary/90 text-xs font-bold gap-2">
+                {isEvaluating ? <Loader2 className="h-3 w-3 animate-spin" /> : <><Sparkles className="h-3 w-3" /> Evaluar Respuesta</>}
               </Button>
             )}
           </div>
           
           <div className="flex-1 relative overflow-y-auto p-8">
-            {isInteractive ? (
+            {challenge.type === 'wordsearch' ? (
               <div className="space-y-12">
                 <WordSearchGame words={challenge.words || []} onComplete={() => setIsGameComplete(true)} />
-                
                 {isGameComplete && (
                   <div className="max-w-2xl mx-auto space-y-6 animate-in slide-in-from-bottom-10 duration-700">
                     <div className="text-center space-y-2">
                       <h3 className="text-2xl font-headline font-bold text-slate-900">¡Fase 1 completada!</h3>
-                      <p className="text-muted-foreground text-sm">Ahora demuestra que sabes usar estos términos escribiendo una respuesta:</p>
+                      <p className="text-muted-foreground text-sm">Ahora demuestra que sabes usar estos términos redactando una breve explicación:</p>
                     </div>
-                    <Textarea 
-                      value={code} 
-                      onChange={(e) => setCode(e.target.value)}
-                      className="min-h-[200px] rounded-[2rem] border-2 border-primary/20 bg-white p-8 text-lg"
-                      placeholder="Escribe tu respuesta aquí..."
-                    />
+                    <Textarea value={code} onChange={(e) => setCode(e.target.value)} className="min-h-[200px] rounded-[2rem] border-2 border-primary/20 bg-white p-8 text-lg" placeholder="Escribe aquí..." />
                   </div>
                 )}
               </div>
+            ) : challenge.type === 'quiz' ? (
+              <div className="max-w-3xl mx-auto py-12">
+                <QuizPlayer questions={challenge.questions || []} onComplete={(s) => handleSubmit(s)} />
+              </div>
+            ) : challenge.type === 'interview' ? (
+              <div className="h-full flex flex-col gap-6 animate-in fade-in duration-700">
+                <div className="bg-white p-8 rounded-[2rem] border shadow-sm border-primary/10">
+                  <h3 className="text-2xl font-headline font-bold text-slate-900 mb-4 flex items-center gap-3">
+                    <MessageSquare className="h-6 w-6 text-primary" />
+                    Sala de Entrevista Técnica
+                  </h3>
+                  <p className="text-slate-600 mb-6 leading-relaxed">
+                    Un reclutador senior está esperando tu respuesta. Usa terminología técnica en inglés y demuestra tus soft skills.
+                  </p>
+                  <Textarea 
+                    value={code} 
+                    onChange={(e) => setCode(e.target.value)} 
+                    className="min-h-[300px] rounded-[1.5rem] border-2 border-slate-100 bg-slate-50 p-8 text-xl font-medium focus-visible:ring-primary shadow-inner"
+                    placeholder="Escribe tu respuesta profesional aquí..."
+                  />
+                </div>
+              </div>
             ) : (
               <div className="h-full bg-slate-950 rounded-[2rem] overflow-hidden flex flex-col shadow-2xl">
-                <Textarea 
-                  value={code} 
-                  onChange={(e) => setCode(e.target.value)}
-                  className="flex-1 bg-slate-950 text-emerald-400 font-mono text-sm p-8 focus-visible:ring-0 border-none resize-none leading-relaxed"
-                  spellCheck={false}
-                />
+                <Textarea value={code} onChange={(e) => setCode(e.target.value)} className="flex-1 bg-slate-950 text-emerald-400 font-mono text-sm p-8 focus-visible:ring-0 border-none resize-none leading-relaxed" spellCheck={false} />
               </div>
             )}
 
@@ -226,7 +258,7 @@ export default function ChallengeExecutionPage() {
               <div className="absolute inset-0 bg-slate-50/50 backdrop-blur-md flex items-center justify-center z-20">
                 <div className="flex flex-col items-center gap-4 p-12 bg-white rounded-[3rem] border shadow-2xl">
                   <Sparkles className="h-16 w-16 text-primary animate-pulse" />
-                  <h3 className="text-2xl font-headline font-bold">Analizando tu desempeño...</h3>
+                  <h3 className="text-2xl font-headline font-bold">IA analizando tu perfil...</h3>
                 </div>
               </div>
             )}
