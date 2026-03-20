@@ -4,11 +4,10 @@
 import { useParams } from 'next/navigation';
 import { useDoc, useFirestore, useMemoFirebase, useCollection } from '@/firebase';
 import { doc, collection, query, orderBy } from 'firebase/firestore';
-import { Loader2, Award, Code2, Terminal, Star, Crown, ExternalLink, Trophy, CheckCircle2, UserCircle, Medal } from 'lucide-react';
+import { Loader2, Award, Code2, Terminal, Star, Crown, Trophy, Medal } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import Link from 'next/link';
 import Image from 'next/image';
 
@@ -47,16 +46,14 @@ export default function PublicPortfolioPage() {
 
   if (!student) {
     return (
-      <div className="h-screen flex flex-col items-center justify-center gap-4 text-center p-6 bg-[#F8FAFC]">
-        <h1 className="text-2xl font-bold font-headline">Perfil no encontrado</h1>
-        <p className="text-muted-foreground">Este usuario no existe o su perfil es privado.</p>
-        <Link href="/"><Image src={logoUrl} alt="Logo" width={60} height={60} className="opacity-20" /></Link>
+      <div className="h-screen flex flex-col items-center justify-center gap-4 text-center bg-[#F8FAFC]">
+        <h1 className="text-2xl font-bold">Perfil no encontrado</h1>
+        <Link href="/"><Button>Volver al inicio</Button></Link>
       </div>
     );
   }
 
   const level = Math.floor((student.xp || 0) / 1000) + 1;
-  const xpInLevel = (student.xp || 0) % 1000;
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] pb-20">
@@ -83,9 +80,6 @@ export default function PublicPortfolioPage() {
               </div>
             </div>
           </div>
-          <div className="shrink-0 hidden lg:block">
-             <Image src={logoUrl} alt="LearnStream" width={120} height={120} className="grayscale opacity-20" />
-          </div>
         </div>
       </header>
 
@@ -110,35 +104,25 @@ export default function PublicPortfolioPage() {
                     </div>
                   ))}
                   {(!achievements || achievements.length === 0) && (
-                    <p className="text-xs text-center text-muted-foreground italic py-4">Sin insignias de maestría aún.</p>
+                    <p className="text-xs text-center text-muted-foreground italic py-4">Sin insignias aún.</p>
                   )}
                 </div>
               </CardContent>
             </Card>
-
-            <div className="p-6 bg-slate-900 rounded-[2.5rem] text-white space-y-4">
-               <h4 className="text-sm font-bold flex items-center gap-2">
-                 <Award className="h-4 w-4 text-primary" />
-                 Perfil Verificado
-               </h4>
-               <p className="text-xs text-slate-400 leading-relaxed">Este portfolio demuestra habilidades técnicas reales validadas por la IA de LearnStream a través de desafíos de código prácticos.</p>
-            </div>
           </div>
 
           <div className="lg:col-span-2 space-y-8">
             <section>
               <h2 className="text-2xl font-headline font-bold mb-6 flex items-center gap-3">
                 <Code2 className="h-6 w-6 text-primary" />
-                Proyectos y Desafíos
+                Desafíos Superados
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {submissions?.map((sub) => (
+                {submissions?.filter(s => s.passed).map((sub) => (
                   <Card key={sub.id} className="rounded-[2rem] border-none shadow-sm bg-white overflow-hidden group hover:shadow-lg transition-all border border-slate-100">
                     <CardHeader className="p-6 pb-2">
                       <div className="flex justify-between items-start mb-2">
-                        <Badge className={sub.passed ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}>
-                          {sub.passed ? 'SUPERADO' : 'FALLIDO'}
-                        </Badge>
+                        <Badge className="bg-emerald-100 text-emerald-700">SUPERADO</Badge>
                         <span className="text-[10px] text-muted-foreground font-bold">{new Date(sub.submittedAt?.toDate()).toLocaleDateString()}</span>
                       </div>
                       <CardTitle className="text-lg font-headline font-bold line-clamp-1">{sub.challengeTitle}</CardTitle>
@@ -154,11 +138,6 @@ export default function PublicPortfolioPage() {
                     </CardContent>
                   </Card>
                 ))}
-                {(!submissions || submissions.length === 0) && (
-                  <div className="col-span-full py-20 text-center bg-white rounded-[3rem] border-4 border-dashed border-slate-200">
-                    <p className="text-muted-foreground font-medium italic">Este estudiante está preparando su primer gran despliegue...</p>
-                  </div>
-                )}
               </div>
             </section>
           </div>

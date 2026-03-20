@@ -19,7 +19,9 @@ import {
   EyeOff,
   Gamepad2,
   ListPlus,
-  X
+  X,
+  Lock,
+  Unlock
 } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -57,7 +59,6 @@ import {
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { TECH_STACK } from '@/lib/languages';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 export default function AdminChallengesPage() {
@@ -102,13 +103,6 @@ export default function AdminChallengesPage() {
     return null;
   }, [db, profile, user?.uid]);
   const { data: challenges, isLoading: isChallengesLoading } = useCollection(challengesQuery);
-
-  const coursesQuery = useMemoFirebase(() => {
-    if (!db || !profile) return null;
-    if (profile.role === 'admin') return collection(db, 'courses');
-    return query(collection(db, 'courses'), where('instructorId', '==', user?.uid));
-  }, [db, profile, user?.uid]);
-  const { data: courses } = useCollection(coursesQuery);
 
   const resetForm = () => {
     setEditingId(null);
@@ -163,7 +157,7 @@ export default function AdminChallengesPage() {
       solution,
       isFree,
       visibility,
-      courseId: visibility === 'private' ? courseId : null,
+      courseId: visibility === 'private' ? (courseId === 'none' ? null : courseId) : null,
       updatedAt: serverTimestamp(),
     };
 
@@ -232,7 +226,7 @@ export default function AdminChallengesPage() {
                 <DialogHeader>
                   <DialogTitle className="text-2xl font-headline">{editingId ? 'Editar Desafío' : 'Crear Desafío'}</DialogTitle>
                   <DialogDescription>
-                    Elige el formato de evaluación. "Sopa de Letras" es ideal para inglés y vocabulario lógico.
+                    Configura el formato y los parámetros de acceso para este reto.
                   </DialogDescription>
                 </DialogHeader>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-10 py-8">
@@ -250,12 +244,8 @@ export default function AdminChallengesPage() {
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="code">
-                              <div className="flex items-center gap-2"><Terminal className="h-3 w-3" /> Editor de Código</div>
-                            </SelectItem>
-                            <SelectItem value="wordsearch">
-                              <div className="flex items-center gap-2"><Gamepad2 className="h-3 w-3" /> Sopa de Letras</div>
-                            </SelectItem>
+                            <SelectItem value="code">Editor de Código</SelectItem>
+                            <SelectItem value="wordsearch">Sopa de Letras</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -307,13 +297,27 @@ export default function AdminChallengesPage() {
                       </div>
                     </div>
 
+                    <div className="bg-slate-50 p-4 rounded-2xl border space-y-4">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Acceso Comercial</p>
+                      <div className="flex items-center justify-between p-2 bg-white rounded-xl border shadow-sm">
+                        <div className="flex items-center gap-2">
+                          {isFree ? <Unlock className="h-4 w-4 text-emerald-500" /> : <Lock className="h-4 w-4 text-amber-500" />}
+                          <Label htmlFor="challenge-free" className="text-sm font-bold cursor-pointer">Contenido Gratuito</Label>
+                        </div>
+                        <Switch id="challenge-free" checked={isFree} onCheckedChange={setIsFree} />
+                      </div>
+                      <p className="text-[10px] text-muted-foreground leading-relaxed">
+                        {isFree ? 'Cualquier estudiante registrado puede realizar este reto.' : 'Solo estudiantes con membresía Premium pueden acceder.'}
+                      </p>
+                    </div>
+
                     <div className="grid gap-2">
                       <Label className="font-bold">Enunciado / Instrucciones</Label>
                       <Textarea 
                         value={description} 
                         onChange={(e) => setDescription(e.target.value)} 
                         className="min-h-[120px] rounded-2xl resize-none" 
-                        placeholder={challengeType === 'wordsearch' ? "Encuentra las palabras y escribe una frase con ellas..." : "Explica qué debe resolver el estudiante..."} 
+                        placeholder="Explica qué debe resolver el estudiante..." 
                       />
                     </div>
                   </div>
@@ -372,7 +376,7 @@ export default function AdminChallengesPage() {
                             value={solution} 
                             onChange={(e) => setSolution(e.target.value)} 
                             className="font-mono text-[11px] min-h-[120px] rounded-2xl border-emerald-200 bg-emerald-50/20" 
-                            placeholder="Ej: Estas palabras son tipos de datos en JS. El estudiante debe usarlas para explicar la memoria..." 
+                            placeholder="Ej: Estas palabras son tipos de datos en JS..." 
                           />
                         </div>
                       </div>
@@ -416,9 +420,6 @@ export default function AdminChallengesPage() {
               </SelectContent>
             </Select>
           </div>
-          <Button variant="ghost" onClick={() => { setSearchTerm(''); setFilterDifficulty('all'); }} className="h-11 px-4 rounded-xl text-xs text-muted-foreground">
-            Limpiar
-          </Button>
         </section>
 
         <div className="space-y-4">
@@ -434,10 +435,7 @@ export default function AdminChallengesPage() {
                   <AccordionTrigger className="hover:no-underline py-6">
                     <div className="flex items-center gap-4 text-left">
                       <div className="bg-primary/10 p-2.5 rounded-2xl">
-                        {tech.includes('HTML') || tech.includes('CSS') || tech.includes('Figma')
-                          ? <Layout className="h-5 w-5 text-primary" />
-                          : <Terminal className="h-5 w-5 text-primary" />
-                        }
+                        <Terminal className="h-5 w-5 text-primary" />
                       </div>
                       <div>
                         <h2 className="text-xl font-headline font-bold">{tech}</h2>
@@ -450,7 +448,7 @@ export default function AdminChallengesPage() {
                       <TableHeader>
                         <TableRow className="border-none hover:bg-transparent">
                           <TableHead className="w-[40%]">Título</TableHead>
-                          <TableHead>Tipo</TableHead>
+                          <TableHead>Acceso</TableHead>
                           <TableHead>Visibilidad</TableHead>
                           <TableHead className="text-right pr-4">Acciones</TableHead>
                         </TableRow>
@@ -465,29 +463,21 @@ export default function AdminChallengesPage() {
                               </div>
                             </TableCell>
                             <TableCell>
-                              {challenge.type === 'wordsearch' ? (
-                                <div className="flex items-center gap-1.5 text-purple-600">
-                                  <Gamepad2 className="h-3 w-3" />
-                                  <span className="text-[10px] font-bold uppercase">Sopa de Letras</span>
-                                </div>
+                              {challenge.isFree ? (
+                                <Badge className="bg-emerald-50 text-emerald-700 border-emerald-100 gap-1 rounded-lg">
+                                  <Unlock className="h-3 w-3" /> Libre
+                                </Badge>
                               ) : (
-                                <div className="flex items-center gap-1.5 text-slate-600">
-                                  <Code2 className="h-3 w-3" />
-                                  <span className="text-[10px] font-bold uppercase">Código</span>
-                                </div>
+                                <Badge className="bg-amber-100 text-amber-700 border-amber-200 gap-1 rounded-lg">
+                                  <Lock className="h-3 w-3" /> Premium
+                                </Badge>
                               )}
                             </TableCell>
                             <TableCell>
                               {challenge.visibility === 'private' ? (
-                                <div className="flex items-center gap-1.5 text-amber-600">
-                                  <EyeOff className="h-3 w-3" />
-                                  <span className="text-xs font-medium">Privado</span>
-                                </div>
+                                <Badge variant="outline" className="text-amber-600 border-amber-200"><EyeOff className="h-3 w-3 mr-1" /> Privado</Badge>
                               ) : (
-                                <div className="flex items-center gap-1.5 text-emerald-600">
-                                  <Eye className="h-3 w-3" />
-                                  <span className="text-xs font-medium">Público</span>
-                                </div>
+                                <Badge variant="outline" className="text-emerald-600 border-emerald-200"><Eye className="h-3 w-3 mr-1" /> Público</Badge>
                               )}
                             </TableCell>
                             <TableCell className="text-right pr-4">
@@ -512,8 +502,7 @@ export default function AdminChallengesPage() {
             </Accordion>
           ) : (
             <div className="text-center py-20 bg-white rounded-[3rem] border-4 border-dashed max-w-2xl mx-auto">
-              <Filter className="h-12 w-12 text-muted-foreground opacity-20 mb-4 mx-auto" />
-              <p className="text-muted-foreground font-medium">No se encontraron desafíos propios.</p>
+              <p className="text-muted-foreground font-medium">No se encontraron desafíos.</p>
             </div>
           )}
         </div>

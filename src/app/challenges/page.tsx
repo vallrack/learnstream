@@ -34,23 +34,8 @@ export default function ChallengesCataloguePage() {
     return userProgress?.map(p => p.courseId) || [];
   }, [userProgress]);
 
-  // Obtenemos todos los cursos para conocer sus tecnologías
-  const allCoursesQuery = useMemoFirebase(() => {
-    if (!db) return null;
-    return collection(db, 'courses');
-  }, [db]);
-  const { data: allCourses, isLoading: isCoursesLoading } = useCollection(allCoursesQuery);
-
-  const enrolledTechnologies = useMemo(() => {
-    if (!allCourses || !enrolledCourseIds.length) return [];
-    return allCourses
-      .filter(c => enrolledCourseIds.includes(c.id))
-      .map(c => c.technology);
-  }, [allCourses, enrolledCourseIds]);
-
   const challengesQuery = useMemoFirebase(() => {
     if (!db) return null;
-    // Eliminamos orderBy para asegurar que se muestren incluso retos sin fecha
     return collection(db, 'coding_challenges');
   }, [db]);
 
@@ -65,23 +50,16 @@ export default function ChallengesCataloguePage() {
     }
   };
 
-  // FILTRADO INTELIGENTE CORREGIDO:
   const filteredChallenges = useMemo(() => {
     if (!allChallenges) return [];
     
     return allChallenges.filter(challenge => {
-      // Si es admin, ve todo
       if (isAdmin) return true;
 
-      // 1. Desafíos vinculados directamente a sus cursos (Privados o Públicos con ID de curso)
       const isLinkedToEnrolledCourse = challenge.courseId && enrolledCourseIds.includes(challenge.courseId);
-      
-      // 2. Desafíos que coinciden con sus tecnologías (Solo si son públicos o no tienen visibilidad definida)
       const isPublic = !challenge.visibility || challenge.visibility === 'public';
-      const isMatchingTech = enrolledTechnologies.includes(challenge.technology);
-      const isPublicMatchingTech = isPublic && isMatchingTech;
       
-      const isVisible = isLinkedToEnrolledCourse || isPublicMatchingTech;
+      const isVisible = isLinkedToEnrolledCourse || isPublic;
       
       const matchesSearch = !searchTerm || 
                             challenge.title?.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -89,7 +67,7 @@ export default function ChallengesCataloguePage() {
       
       return isVisible && matchesSearch;
     });
-  }, [allChallenges, isAdmin, enrolledCourseIds, enrolledTechnologies, searchTerm]);
+  }, [allChallenges, isAdmin, enrolledCourseIds, searchTerm]);
 
   const groupedChallenges = useMemo(() => {
     return filteredChallenges.reduce((acc, challenge) => {
@@ -99,8 +77,6 @@ export default function ChallengesCataloguePage() {
       return acc;
     }, {} as Record<string, any[]>);
   }, [filteredChallenges]);
-
-  const isLoading = isChallengesLoading || isCoursesLoading;
 
   return (
     <div className="min-h-screen bg-[#F8FAFC]">
@@ -114,9 +90,7 @@ export default function ChallengesCataloguePage() {
           </div>
           <h1 className="text-4xl md:text-6xl font-headline font-bold mb-6 text-foreground">Desafíos de Código</h1>
           <p className="text-lg text-muted-foreground mb-10 leading-relaxed">
-            {isAdmin 
-              ? "Panel de administración: Visualizando todos los retos del sistema." 
-              : "Retos prácticos basados en tus cursos y tecnologías activas."}
+            Retos prácticos evaluados por IA para construir tu portfolio profesional.
           </p>
           
           <div className="relative max-w-xl mx-auto">
@@ -130,10 +104,10 @@ export default function ChallengesCataloguePage() {
           </div>
         </header>
 
-        {isLoading ? (
+        {isChallengesLoading ? (
           <div className="py-20 flex flex-col items-center justify-center gap-4">
             <Loader2 className="h-10 w-10 animate-spin text-primary" />
-            <p className="font-medium text-muted-foreground">Sincronizando retos con tu progreso...</p>
+            <p className="font-medium text-muted-foreground">Cargando retos...</p>
           </div>
         ) : filteredChallenges.length > 0 ? (
           <div className="space-y-20">
@@ -141,14 +115,11 @@ export default function ChallengesCataloguePage() {
               <section key={tech}>
                 <div className="flex items-center gap-4 mb-8 border-b pb-4 border-slate-200">
                   <div className="bg-primary p-2.5 rounded-2xl shadow-lg shadow-primary/20">
-                    {tech.includes('HTML') || tech.includes('CSS') || tech.includes('Figma')
-                      ? <Layout className="h-6 w-6 text-white" />
-                      : <Terminal className="h-6 w-6 text-white" />
-                    }
+                    <Terminal className="h-6 w-6 text-white" />
                   </div>
                   <div>
                     <h2 className="text-2xl font-headline font-bold text-foreground">{tech}</h2>
-                    <p className="text-sm text-muted-foreground">{techChallenges.length} {techChallenges.length === 1 ? 'desafío disponible' : 'desafíos disponibles'}</p>
+                    <p className="text-sm text-muted-foreground">{techChallenges.length} {techChallenges.length === 1 ? 'desafío' : 'desafíos'}</p>
                   </div>
                 </div>
                 
@@ -178,7 +149,7 @@ export default function ChallengesCataloguePage() {
                         </p>
                       </CardContent>
                       <CardFooter className="p-8 pt-0 mt-auto">
-                        <Button className="w-full h-12 rounded-2xl gap-2 font-bold group-hover:bg-primary transition-all shadow-lg shadow-transparent group-hover:shadow-primary/20" asChild>
+                        <Button className="w-full h-12 rounded-2xl gap-2 font-bold" asChild>
                           <Link href={`/challenges/${challenge.id}`}>
                             Aceptar Desafío
                             <ArrowRight className="h-4 w-4" />
@@ -192,11 +163,8 @@ export default function ChallengesCataloguePage() {
             ))}
           </div>
         ) : (
-          <div className="text-center py-20 bg-muted/20 rounded-[3rem] border-4 border-dashed max-w-2xl mx-auto flex flex-col items-center">
-            <EyeOff className="h-12 w-12 text-muted-foreground opacity-20 mb-4" />
-            <p className="text-muted-foreground font-medium">No hay desafíos disponibles para tus tecnologías actuales.</p>
-            <p className="text-xs text-muted-foreground mt-2">Inscríbete en nuevos cursos para desbloquear retos de otras tecnologías.</p>
-            <Link href="/courses" className="mt-6"><Button variant="outline">Explorar Catálogo de Cursos</Button></Link>
+          <div className="text-center py-20">
+            <p className="text-muted-foreground">No se encontraron retos.</p>
           </div>
         )}
       </main>

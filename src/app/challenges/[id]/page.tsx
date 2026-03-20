@@ -2,7 +2,7 @@
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Navbar } from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -12,21 +12,18 @@ import { useToast } from '@/hooks/use-toast';
 import { 
   Code2, 
   ChevronLeft, 
-  Play, 
   Loader2, 
   Trophy, 
-  CheckCircle2, 
-  AlertCircle,
-  Sparkles,
-  Terminal,
-  Layout,
-  Lock,
-  Award,
-  Medal,
-  ShieldAlert,
-  BookOpen,
-  Gamepad2,
-  BrainCircuit
+  Sparkles, 
+  Terminal, 
+  Lock, 
+  Award, 
+  Medal, 
+  ShieldAlert, 
+  BookOpen, 
+  Gamepad2, 
+  BrainCircuit,
+  ArrowRight
 } from 'lucide-react';
 import { useDoc, useFirestore, useMemoFirebase, useUser, addDocumentNonBlocking, useCollection } from '@/firebase';
 import { doc, collection, serverTimestamp } from 'firebase/firestore';
@@ -41,7 +38,6 @@ export default function ChallengeExecutionPage() {
   const db = useFirestore();
   const { user, isUserLoading } = useUser();
   const { toast } = useToast();
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const challengeRef = useMemoFirebase(() => {
     if (!db || !challengeId) return null;
@@ -55,34 +51,14 @@ export default function ChallengeExecutionPage() {
   }, [db, user?.uid]);
   const { data: profile } = useDoc(profileRef);
 
-  const progressQuery = useMemoFirebase(() => {
-    if (!db || !user?.uid) return null;
-    return collection(db, 'users', user.uid, 'courseProgress');
-  }, [db, user?.uid]);
-  const { data: userProgress } = useCollection(progressQuery);
-
-  const enrolledCourseIds = useMemo(() => {
-    return userProgress?.map(p => p.courseId) || [];
-  }, [userProgress]);
-
   const [code, setCode] = useState('');
   const [isGameComplete, setIsGameComplete] = useState(false);
   const [isEvaluating, setIsEvaluating] = useState(false);
   const [result, setResult] = useState<EvaluateChallengeOutput | null>(null);
 
   useEffect(() => {
-    if (challenge) {
-      setCode(challenge.initialCode || '');
-    }
+    if (challenge) setCode(challenge.initialCode || '');
   }, [challenge]);
-
-  const canAccessChallenge = useMemo(() => {
-    if (!challenge) return false;
-    if (profile?.role === 'admin') return true;
-    const isLinkedToEnrolledCourse = challenge.courseId && enrolledCourseIds.includes(challenge.courseId);
-    const isPublic = !challenge.visibility || challenge.visibility === 'public';
-    return isLinkedToEnrolledCourse || isPublic;
-  }, [challenge, profile, enrolledCourseIds]);
 
   const isPremiumLocked = useMemo(() => {
     if (!challenge || profile?.role === 'admin') return false;
@@ -90,7 +66,7 @@ export default function ChallengeExecutionPage() {
   }, [challenge, profile]);
 
   const handleSubmit = async () => {
-    if (!challenge || !db || !canAccessChallenge || isPremiumLocked) return;
+    if (!challenge || !db || isPremiumLocked) return;
     
     setIsEvaluating(true);
     setResult(null);
@@ -124,7 +100,6 @@ export default function ChallengeExecutionPage() {
         }
       }
     } catch (error) {
-      console.error('Evaluation failed', error);
       toast({ variant: "destructive", title: "Error de IA", description: "No pudimos evaluar tu actividad." });
     } finally {
       setIsEvaluating(false);
@@ -132,28 +107,26 @@ export default function ChallengeExecutionPage() {
   };
 
   if (isUserLoading || isChallengeLoading) {
-    return <div className="h-screen flex items-center justify-center bg-[#F8FAFC]"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+    return <div className="h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
   }
 
-  if (!challenge) {
-    return <div className="h-screen flex flex-col items-center justify-center gap-4"><h1 className="text-2xl font-bold">Reto no encontrado</h1><Button onClick={() => router.back()}>Volver</Button></div>;
-  }
-
-  if (!canAccessChallenge) {
+  if (isPremiumLocked) {
     return (
       <div className="h-screen flex flex-col bg-[#F8FAFC]">
         <Navbar />
         <main className="flex-1 flex flex-col items-center justify-center p-6 text-center">
-          <div className="w-24 h-24 bg-rose-100 rounded-[2.5rem] flex items-center justify-center mb-8 shadow-xl shadow-rose-500/10">
-            <ShieldAlert className="h-10 w-10 text-rose-600" />
+          <div className="w-24 h-24 bg-amber-100 rounded-[2.5rem] flex items-center justify-center mb-8 shadow-xl">
+            <Lock className="h-10 w-10 text-amber-600" />
           </div>
-          <h1 className="text-4xl font-headline font-bold mb-4">Acceso Restringido</h1>
-          <p className="text-muted-foreground max-w-md mb-10 text-lg">Inscríbete en el curso de **{challenge.technology}** para acceder.</p>
-          <Link href="/courses"><Button className="rounded-2xl h-14 px-8 font-bold gap-2"><BookOpen className="h-5 w-5" /> Explorar Cursos</Button></Link>
+          <h1 className="text-4xl font-headline font-bold mb-4 text-slate-900">Reto Premium</h1>
+          <p className="text-muted-foreground max-w-md mb-10 text-lg">Este desafío requiere una suscripción activa para ser evaluado por IA.</p>
+          <Link href="/checkout"><Button className="rounded-2xl h-14 px-10 font-bold bg-amber-500 hover:bg-amber-600">Mejorar a Premium</Button></Link>
         </main>
       </div>
     );
   }
+
+  if (!challenge) return <div>No encontrado</div>;
 
   const isInteractive = challenge.type === 'wordsearch';
 
@@ -227,13 +200,13 @@ export default function ChallengeExecutionPage() {
                   <div className="max-w-2xl mx-auto space-y-6 animate-in slide-in-from-bottom-10 duration-700">
                     <div className="text-center space-y-2">
                       <h3 className="text-2xl font-headline font-bold text-slate-900">¡Fase 1 completada!</h3>
-                      <p className="text-muted-foreground text-sm">Ahora demuestra que sabes usar estos términos. Escribe una breve reflexión o frases usándolos:</p>
+                      <p className="text-muted-foreground text-sm">Ahora demuestra que sabes usar estos términos escribiendo una respuesta:</p>
                     </div>
                     <Textarea 
                       value={code} 
                       onChange={(e) => setCode(e.target.value)}
-                      className="min-h-[200px] rounded-[2rem] border-2 border-primary/20 bg-white p-8 text-lg shadow-xl focus-visible:ring-primary"
-                      placeholder="Escribe tu respuesta aquí para que la IA la califique..."
+                      className="min-h-[200px] rounded-[2rem] border-2 border-primary/20 bg-white p-8 text-lg"
+                      placeholder="Escribe tu respuesta aquí..."
                     />
                   </div>
                 )}
@@ -251,13 +224,9 @@ export default function ChallengeExecutionPage() {
 
             {isEvaluating && (
               <div className="absolute inset-0 bg-slate-50/50 backdrop-blur-md flex items-center justify-center z-20">
-                <div className="flex flex-col items-center gap-4 p-12 bg-white rounded-[3rem] border shadow-2xl text-center">
-                  <div className="relative">
-                    <Sparkles className="h-16 w-16 text-primary animate-pulse" />
-                    <Loader2 className="h-16 w-16 text-primary animate-spin absolute inset-0 opacity-20" />
-                  </div>
-                  <h3 className="text-2xl font-headline font-bold text-slate-900">Analizando tu desempeño...</h3>
-                  <p className="text-muted-foreground text-sm">Nuestra IA está revisando la coherencia y gramática.</p>
+                <div className="flex flex-col items-center gap-4 p-12 bg-white rounded-[3rem] border shadow-2xl">
+                  <Sparkles className="h-16 w-16 text-primary animate-pulse" />
+                  <h3 className="text-2xl font-headline font-bold">Analizando tu desempeño...</h3>
                 </div>
               </div>
             )}
