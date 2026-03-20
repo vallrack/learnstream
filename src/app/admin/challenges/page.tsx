@@ -22,7 +22,8 @@ import {
   MessageSquare,
   Sparkles,
   Terminal,
-  Cpu
+  Cpu,
+  Layers
 } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -251,14 +252,30 @@ export default function AdminChallengesPage() {
                         </Select>
                       </div>
                       <div className="grid gap-2">
-                        <Label className="font-bold">Acceso</Label>
-                        <div className="flex items-center justify-between p-2 bg-slate-50 rounded-xl border h-11">
-                          <div className="flex items-center gap-2">
-                            {isFree ? <Unlock className="h-4 w-4 text-emerald-500" /> : <Lock className="h-4 w-4 text-amber-500" />}
-                            <span className="text-xs font-bold">{isFree ? 'Gratis' : 'Premium'}</span>
+                        <Label className="font-bold">Visibilidad en Catálogo</Label>
+                        <Select value={visibility} onValueChange={(v: any) => setVisibility(v)}>
+                          <SelectTrigger className="rounded-xl h-11"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="public">Público (Catálogo)</SelectItem>
+                            <SelectItem value="private">Privado (Solo Curso)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div className="grid gap-2">
+                      <Label className="font-bold">Acceso Económico</Label>
+                      <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border h-14">
+                        <div className="flex items-center gap-3">
+                          <div className={`p-2 rounded-lg ${isFree ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-600'}`}>
+                            {isFree ? <Unlock className="h-5 w-5" /> : <Lock className="h-5 w-5" />}
                           </div>
-                          <Switch checked={isFree} onCheckedChange={setIsFree} />
+                          <div className="flex flex-col">
+                            <span className="text-xs font-bold">{isFree ? 'Gratuito para todos' : 'Exclusivo Premium'}</span>
+                            <span className="text-[10px] text-muted-foreground">{isFree ? 'Sin restricciones' : 'Requiere suscripción'}</span>
+                          </div>
                         </div>
+                        <Switch checked={isFree} onCheckedChange={setIsFree} />
                       </div>
                     </div>
 
@@ -351,7 +368,7 @@ export default function AdminChallengesPage() {
 
         <div className="bg-white rounded-[2.5rem] border shadow-sm overflow-hidden">
           <Table>
-            <TableHeader><TableRow className="bg-slate-50 border-none"><TableHead className="pl-8 h-14">Actividad</TableHead><TableHead>Tipo</TableHead><TableHead>Tecnología</TableHead><TableHead>Acceso</TableHead><TableHead className="text-right pr-8">Acciones</TableHead></TableRow></TableHeader>
+            <TableHeader><TableRow className="bg-slate-50 border-none"><TableHead className="pl-8 h-14">Actividad</TableHead><TableHead>Tipo</TableHead><TableHead>Ubicación</TableHead><TableHead>Acceso</TableHead><TableHead className="text-right pr-8">Acciones</TableHead></TableRow></TableHeader>
             <TableBody>
               {isChallengesLoading ? (
                 <TableRow><TableCell colSpan={5} className="h-40 text-center"><Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" /></TableCell></TableRow>
@@ -364,7 +381,10 @@ export default function AdminChallengesPage() {
                       <div className="bg-slate-100 p-2 rounded-xl text-slate-500">
                         {c.type === 'quiz' ? <HelpCircle className="h-5 w-5" /> : c.type === 'interview' ? <MessageSquare className="h-5 w-5" /> : c.type === 'wordsearch' ? <Gamepad2 className="h-5 w-5" /> : <Terminal className="h-5 w-5" />}
                       </div>
-                      <span className="font-bold text-slate-900">{c.title}</span>
+                      <div className="flex flex-col">
+                        <span className="font-bold text-slate-900">{c.title}</span>
+                        <span className="text-[10px] text-muted-foreground uppercase font-bold">{c.technology}</span>
+                      </div>
                     </div>
                   </TableCell>
                   <TableCell>
@@ -373,7 +393,15 @@ export default function AdminChallengesPage() {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <span className="text-xs font-bold text-slate-600 uppercase">{c.technology}</span>
+                    {c.visibility === 'private' ? (
+                      <Badge variant="outline" className="bg-slate-50 text-slate-500 border-slate-200 gap-1 rounded-lg">
+                        <Lock className="h-3 w-3" /> Privado
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200 gap-1 rounded-lg">
+                        <Layers className="h-3 w-3" /> Catálogo
+                      </Badge>
+                    )}
                   </TableCell>
                   <TableCell>
                     {c.isFree ? <Badge className="bg-emerald-50 text-emerald-700 border-emerald-100">Libre</Badge> : <Badge className="bg-amber-100 text-amber-700 border-amber-200">Premium</Badge>}

@@ -65,6 +65,7 @@
         "difficulty": { "type": "string", "enum": ["Principiante", "Intermedio", "Avanzado"] },
         "technology": { "type": "string" },
         "type": { "type": "string", "enum": ["code", "wordsearch", "quiz", "interview"], "default": "code" },
+        "visibility": { "type": "string", "enum": ["public", "private"], "default": "public" },
         "words": { "type": "array", "items": { "type": "string" } },
         "questions": { "type": "array", "items": { "type": "object" } },
         "initialCode": { "type": "string" },
