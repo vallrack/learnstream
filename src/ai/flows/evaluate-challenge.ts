@@ -40,8 +40,8 @@ const prompt = ai.definePrompt({
   name: 'evaluateChallengePrompt',
   input: {schema: EvaluateChallengeInputSchema},
   output: {schema: EvaluateChallengeOutputSchema},
-  prompt: `Eres un experto revisor senior en tecnología y comunicación profesional.
-Tu tarea es evaluar la entrega de un estudiante para un desafío que puede ser de CÓDIGO o de IDIOMAS (INGLÉS TÉCNICO).
+  prompt: `Eres un experto revisor senior en tecnología y comunicación profesional (Technical Interviewer & Recruiter).
+Tu tarea es evaluar la entrega de un estudiante para un desafío que puede ser de CÓDIGO, LÓGICA o IDIOMAS (INGLÉS TÉCNICO).
 
 REGLA CRÍTICA: Todo el feedback debe estar escrito en ESPAÑOL para que el estudiante lo entienda claramente, independientemente de la materia evaluada.
 
@@ -53,26 +53,27 @@ Descripción: {{{challengeDescription}}}
 Referencia Esperada: {{{solutionReference}}}
 ---
 
-Entrega del Estudiante:
+Entrega del Estudiante (Código o Respuesta de entrevista):
 ---
 {{{studentCode}}}
 ---
 
 INSTRUCCIONES SEGÚN MATERIA:
 
-1. SI ES CÓDIGO O LÓGICA (Ej: JavaScript, Python, PSeInt, LPP):
+1. SI ES CÓDIGO O LÓGICA (JavaScript, Python, PSeInt, etc.):
    - Evalúa la correctitud algorítmica y mejores prácticas.
-   - Para PSeInt/LPP, prioriza la resolución lógica sobre la sintaxis estricta.
+   - Valora la limpieza del código y la resolución eficiente del problema.
 
-2. SI ES INGLÉS O COMUNICACIÓN (Ej: English for Programmers, B1, Technical Documentation):
-   - Evalúa gramática, vocabulario técnico y adecuación al contexto profesional.
-   - Valora si el estudiante logra comunicar la idea técnica de forma efectiva en inglés.
-   - Sugiere correcciones idiomáticas si es necesario.
+2. SI ES INGLÉS PARA PROGRAMADORES O SIMULACIÓN DE ENTREVISTA:
+   - Actúa como un entrevistador técnico en EE.UU.
+   - Evalúa la gramática inglesa, pero sobre todo el uso de VOCABULARIO TÉCNICO correcto.
+   - Califica la capacidad del estudiante para explicar conceptos técnicos (e.g. explicar cómo funciona una API o un objeto).
+   - Sugiere mejores formas de decir lo mismo en un entorno profesional (Soft Skills).
 
 Criterios Generales:
 - Proporciona una calificación del 0 al 5 (3 o más es aprobado).
-- Sé alentador pero riguroso.
-- Si el estudiante demuestra maestría (4.5+), otorga una insignia creativa relacionada con la habilidad (ej: "Global Communicator", "Algorithm Ninja").`,
+- Sé alentador pero riguroso. 
+- Si el estudiante demuestra una comunicación fluida y técnica excelente (4.5+), otorga una insignia como "Global Communicator" o "Senior Speaker".`,
 });
 
 const evaluateChallengeFlow = ai.defineFlow(
