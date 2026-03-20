@@ -21,7 +21,8 @@ import {
   HelpCircle, 
   MessageSquare,
   Sparkles,
-  Terminal
+  Terminal,
+  Cpu
 } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -59,7 +60,6 @@ import {
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { TECH_STACK } from '@/lib/languages';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Card, CardContent } from '@/components/ui/card';
 
 export default function AdminChallengesPage() {
@@ -68,16 +68,6 @@ export default function AdminChallengesPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterDifficulty, setFilterDifficulty] = useState('all');
-
-  const profileRef = useMemoFirebase(() => {
-    if (!db || !user?.uid) return null;
-    return doc(db, 'users', user.uid);
-  }, [db, user?.uid]);
-  const { data: profile } = useDoc(profileRef);
-  const isAdmin = profile?.role === 'admin';
-
   // Form state
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -91,6 +81,13 @@ export default function AdminChallengesPage() {
   const [isFree, setIsFree] = useState(true);
   const [visibility, setVisibility] = useState<'public' | 'private'>('public');
   const [questions, setQuestions] = useState<any[]>([]);
+
+  const profileRef = useMemoFirebase(() => {
+    if (!db || !user?.uid) return null;
+    return doc(db, 'users', user.uid);
+  }, [db, user?.uid]);
+  const { data: profile } = useDoc(profileRef);
+  const isAdmin = profile?.role === 'admin';
 
   const challengesQuery = useMemoFirebase(() => {
     if (!db || !profile) return null;
@@ -178,11 +175,11 @@ export default function AdminChallengesPage() {
       <main className="max-w-7xl mx-auto px-6 py-12">
         <header className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-12">
           <div>
-            <h1 className="text-4xl font-headline font-bold mb-2 flex items-center gap-3">
+            <h1 className="text-4xl font-headline font-bold mb-2 flex items-center gap-3 text-slate-900">
               <Sparkles className="h-8 w-8 text-primary" />
               Gestión de Actividades
             </h1>
-            <p className="text-muted-foreground">Crea retos interactivos, trivias o simulacros de entrevista.</p>
+            <p className="text-muted-foreground font-medium">Crea retos interactivos, trivias o simulacros de entrevista.</p>
           </div>
           
           <Dialog open={isDialogOpen} onOpenChange={(open) => {
@@ -223,6 +220,26 @@ export default function AdminChallengesPage() {
                         </Select>
                       </div>
                       <div className="grid gap-2">
+                        <Label className="font-bold">Tecnología</Label>
+                        <Select value={technology} onValueChange={setTechnology}>
+                          <SelectTrigger className="rounded-xl h-11"><SelectValue placeholder="Elegir..." /></SelectTrigger>
+                          <SelectContent className="max-h-[300px]">
+                            {Object.entries(TECH_STACK).map(([cat, subgroups]) => (
+                              <SelectGroup key={cat}>
+                                <SelectLabel className="bg-muted/50 py-1">{cat}</SelectLabel>
+                                {Array.isArray(subgroups) 
+                                  ? subgroups.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)
+                                  : Object.entries(subgroups).map(([sub, techs]) => techs.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>))
+                                }
+                              </SelectGroup>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="grid gap-2">
                         <Label className="font-bold">Dificultad</Label>
                         <Select value={difficulty} onValueChange={setDifficulty}>
                           <SelectTrigger className="rounded-xl h-11"><SelectValue /></SelectTrigger>
@@ -233,15 +250,15 @@ export default function AdminChallengesPage() {
                           </SelectContent>
                         </Select>
                       </div>
-                    </div>
-
-                    <div className="bg-slate-50 p-4 rounded-2xl border space-y-4">
-                      <div className="flex items-center justify-between p-2 bg-white rounded-xl border shadow-sm">
-                        <div className="flex items-center gap-2">
-                          {isFree ? <Unlock className="h-4 w-4 text-emerald-500" /> : <Lock className="h-4 w-4 text-amber-500" />}
-                          <Label htmlFor="ch-free" className="text-sm font-bold">Actividad Gratuita</Label>
+                      <div className="grid gap-2">
+                        <Label className="font-bold">Acceso</Label>
+                        <div className="flex items-center justify-between p-2 bg-slate-50 rounded-xl border h-11">
+                          <div className="flex items-center gap-2">
+                            {isFree ? <Unlock className="h-4 w-4 text-emerald-500" /> : <Lock className="h-4 w-4 text-amber-500" />}
+                            <span className="text-xs font-bold">{isFree ? 'Gratis' : 'Premium'}</span>
+                          </div>
+                          <Switch checked={isFree} onCheckedChange={setIsFree} />
                         </div>
-                        <Switch id="ch-free" checked={isFree} onCheckedChange={setIsFree} />
                       </div>
                     </div>
 
@@ -250,7 +267,7 @@ export default function AdminChallengesPage() {
                       <Textarea 
                         value={description} 
                         onChange={(e) => setDescription(e.target.value)} 
-                        className="min-h-[120px] rounded-2xl resize-none" 
+                        className="min-h-[150px] rounded-2xl resize-none" 
                         placeholder="Explica el objetivo de esta actividad..." 
                       />
                     </div>
@@ -269,12 +286,12 @@ export default function AdminChallengesPage() {
                           />
                         </div>
                         <div className="grid gap-3">
-                          <Label className="font-bold text-emerald-600">Referencia IA</Label>
+                          <Label className="font-bold text-emerald-600">Referencia IA (Lo que buscará evaluar)</Label>
                           <Textarea 
                             value={solution} 
                             onChange={(e) => setSolution(e.target.value)} 
                             className="font-mono text-[11px] min-h-[120px] rounded-2xl border-emerald-200 bg-emerald-50/20" 
-                            placeholder="Qué espera la IA encontrar en la respuesta..." 
+                            placeholder="Ej: Debe usar 'async/await' y explicar el manejo de errores..." 
                           />
                         </div>
                       </>
@@ -283,7 +300,7 @@ export default function AdminChallengesPage() {
                         <div className="grid gap-3">
                           <Label className="font-bold">Palabras Clave</Label>
                           <div className="flex gap-2">
-                            <Input value={wordInput} onChange={(e) => setWordsInput(e.target.value)} placeholder="Ej: HOOKS" className="rounded-xl h-11 bg-white" />
+                            <Input value={wordInput} onChange={(e) => setWordsInput(e.target.value)} placeholder="Ej: PROMISE" className="rounded-xl h-11 bg-white" />
                             <Button type="button" onClick={() => { if(wordInput) setWords([...words, wordInput.toUpperCase()]); setWordsInput(''); }} className="rounded-xl h-11">Añadir</Button>
                           </div>
                           <div className="flex flex-wrap gap-2 mt-2">
@@ -299,7 +316,7 @@ export default function AdminChallengesPage() {
                       <div className="space-y-6">
                         <div className="flex items-center justify-between">
                           <Label className="font-bold">Preguntas de la Trivia</Label>
-                          <Button type="button" onClick={addQuestion} variant="outline" size="sm" className="rounded-xl h-8"><Plus className="h-3 w-3 mr-1"/> Añadir</Button>
+                          <Button type="button" onClick={addQuestion} variant="outline" size="sm" className="rounded-xl h-8"><Plus className="h-3 w-3 mr-1"/> Añadir Pregunta</Button>
                         </div>
                         <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
                           {questions.map((q, qIdx) => (
@@ -334,29 +351,39 @@ export default function AdminChallengesPage() {
 
         <div className="bg-white rounded-[2.5rem] border shadow-sm overflow-hidden">
           <Table>
-            <TableHeader><TableRow className="bg-slate-50"><TableHead className="pl-8">Actividad</TableHead><TableHead>Tipo</TableHead><TableHead>Acceso</TableHead><TableHead className="text-right pr-8">Acciones</TableHead></TableRow></TableHeader>
+            <TableHeader><TableRow className="bg-slate-50 border-none"><TableHead className="pl-8 h-14">Actividad</TableHead><TableHead>Tipo</TableHead><TableHead>Tecnología</TableHead><TableHead>Acceso</TableHead><TableHead className="text-right pr-8">Acciones</TableHead></TableRow></TableHeader>
             <TableBody>
-              {challenges?.map(c => (
-                <TableRow key={c.id}>
+              {isChallengesLoading ? (
+                <TableRow><TableCell colSpan={5} className="h-40 text-center"><Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" /></TableCell></TableRow>
+              ) : challenges?.length === 0 ? (
+                <TableRow><TableCell colSpan={5} className="h-40 text-center text-muted-foreground italic">No hay actividades creadas aún.</TableCell></TableRow>
+              ) : challenges?.map(c => (
+                <TableRow key={c.id} className="border-slate-100">
                   <TableCell className="pl-8 py-4">
-                    <div className="flex flex-col">
+                    <div className="flex items-center gap-3">
+                      <div className="bg-slate-100 p-2 rounded-xl text-slate-500">
+                        {c.type === 'quiz' ? <HelpCircle className="h-5 w-5" /> : c.type === 'interview' ? <MessageSquare className="h-5 w-5" /> : c.type === 'wordsearch' ? <Gamepad2 className="h-5 w-5" /> : <Terminal className="h-5 w-5" />}
+                      </div>
                       <span className="font-bold text-slate-900">{c.title}</span>
-                      <span className="text-[10px] text-muted-foreground uppercase font-bold">{c.technology}</span>
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge variant="secondary" className="rounded-lg gap-1.5">
-                      {c.type === 'quiz' ? <HelpCircle className="h-3 w-3" /> : c.type === 'interview' ? <MessageSquare className="h-3 w-3" /> : c.type === 'wordsearch' ? <Gamepad2 className="h-3 w-3" /> : <Terminal className="h-3 w-3" />}
+                    <Badge variant="secondary" className="rounded-lg font-bold">
                       {c.type === 'quiz' ? 'Trivia' : c.type === 'interview' ? 'Entrevista' : c.type === 'wordsearch' ? 'Sopa Letras' : 'Código'}
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    {c.isFree ? <Badge className="bg-emerald-50 text-emerald-700 border-emerald-100">Gratis</Badge> : <Badge className="bg-amber-100 text-amber-700 border-amber-200">Premium</Badge>}
+                    <span className="text-xs font-bold text-slate-600 uppercase">{c.technology}</span>
+                  </TableCell>
+                  <TableCell>
+                    {c.isFree ? <Badge className="bg-emerald-50 text-emerald-700 border-emerald-100">Libre</Badge> : <Badge className="bg-amber-100 text-amber-700 border-amber-200">Premium</Badge>}
                   </TableCell>
                   <TableCell className="text-right pr-8">
                     <div className="flex justify-end gap-1">
                       <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl" onClick={() => handleEditClick(c)}><Edit className="h-4 w-4" /></Button>
-                      {isAdmin && <Button variant="ghost" size="icon" className="h-9 w-9 text-destructive hover:bg-destructive/10 rounded-xl" onClick={() => deleteDocumentNonBlocking(doc(db, 'coding_challenges', c.id))}><Trash2 className="h-4 w-4" /></Button>}
+                      {(isAdmin || profile?.role === 'instructor') && (
+                        <Button variant="ghost" size="icon" className="h-9 w-9 text-destructive hover:bg-destructive/10 rounded-xl" onClick={() => { if(confirm('¿Eliminar actividad?')) deleteDocumentNonBlocking(doc(db, 'coding_challenges', c.id)) }}><Trash2 className="h-4 w-4" /></Button>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>

@@ -25,7 +25,8 @@ import {
   BrainCircuit,
   ArrowRight,
   MessageSquare,
-  HelpCircle
+  HelpCircle,
+  Stars
 } from 'lucide-react';
 import { useDoc, useFirestore, useMemoFirebase, useUser, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
 import { doc, collection, serverTimestamp, increment } from 'firebase/firestore';
@@ -71,13 +72,12 @@ export default function ChallengeExecutionPage() {
   const handleSubmit = async (quizScore?: number) => {
     if (!challenge || !db || isPremiumLocked) return;
     
-    // Si es un quiz, generamos una respuesta de IA simulada basada en el puntaje
     if (challenge.type === 'quiz' && quizScore !== undefined) {
       processResult({
         score: quizScore,
         passed: quizScore >= 3,
         feedback: quizScore >= 4 ? "Excelente dominio teórico de los conceptos." : "Buen intento, revisa los temas en los que fallaste.",
-        awardedBadge: quizScore >= 4.5 ? { title: "Teórico Maestro", description: "Dominio perfecto de la trivia.", iconType: "logic" } : undefined
+        awardedBadge: quizScore >= 4.5 ? { title: "Teórico Maestro", description: "Dominio perfecto de la trivia técnica.", iconType: "logic" } : undefined
       });
       return;
     }
@@ -94,7 +94,7 @@ export default function ChallengeExecutionPage() {
       });
       processResult(evaluation);
     } catch (error) {
-      toast({ variant: "destructive", title: "Error de IA", description: "No pudimos evaluar tu actividad." });
+      toast({ variant: "destructive", title: "Error de IA", description: "No pudimos evaluar tu actividad en este momento." });
     } finally {
       setIsEvaluating(false);
     }
@@ -113,9 +113,9 @@ export default function ChallengeExecutionPage() {
         submittedAt: serverTimestamp()
       });
 
-      // Actualizar XP (50 por completar, 100 si pasa)
+      // Actualizar XP (100 por completar, 200 si pasa)
       updateDocumentNonBlocking(doc(db, 'users', user.uid), {
-        xp: increment(evaluation.passed ? 150 : 50)
+        xp: increment(evaluation.passed ? 200 : 100)
       });
 
       if (evaluation.awardedBadge) {
@@ -142,14 +142,14 @@ export default function ChallengeExecutionPage() {
             <Lock className="h-10 w-10 text-amber-600" />
           </div>
           <h1 className="text-4xl font-headline font-bold mb-4 text-slate-900">Actividad Premium</h1>
-          <p className="text-muted-foreground max-w-md mb-10 text-lg">Este reto requiere una suscripción activa para ser evaluado por IA y otorgar XP.</p>
-          <Link href="/checkout"><Button className="rounded-2xl h-14 px-10 font-bold bg-amber-500 hover:bg-amber-600">Mejorar a Premium</Button></Link>
+          <p className="text-muted-foreground max-w-md mb-10 text-lg">Este reto requiere una suscripción activa para ser evaluado por IA y obtener XP en tu portfolio.</p>
+          <Link href="/checkout"><Button className="rounded-2xl h-14 px-10 font-bold bg-amber-500 hover:bg-amber-600 shadow-xl shadow-amber-200">Mejorar a Premium Ahora</Button></Link>
         </main>
       </div>
     );
   }
 
-  if (!challenge) return <div>No encontrado</div>;
+  if (!challenge) return <div className="h-screen flex items-center justify-center">Reto no encontrado</div>;
 
   return (
     <div className="h-screen flex flex-col bg-[#F8FAFC] overflow-hidden">
@@ -163,15 +163,15 @@ export default function ChallengeExecutionPage() {
           <div className="flex-1 overflow-y-auto p-6 space-y-8">
             <section>
               <div className="flex items-center justify-between mb-4">
-                <Badge variant="secondary" className="rounded-lg">{challenge.technology}</Badge>
-                <Badge className={challenge.difficulty === 'Principiante' ? 'bg-emerald-500/10 text-emerald-600' : 'bg-rose-500/10 text-rose-600'}>
+                <Badge variant="outline" className="rounded-xl border-primary/20 bg-primary/5 text-primary font-bold">{challenge.technology}</Badge>
+                <Badge className={challenge.difficulty === 'Principiante' ? 'bg-emerald-500/10 text-emerald-600 border-none' : 'bg-rose-500/10 text-rose-600 border-none'}>
                   {challenge.difficulty}
                 </Badge>
               </div>
               <div className="space-y-4">
-                <h3 className="font-bold text-sm text-slate-900 flex items-center gap-2">
-                  <BrainCircuit className="h-4 w-4 text-primary" />
-                  Contexto del Reto
+                <h3 className="font-bold text-xs uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                  <BrainCircuit className="h-4 w-4" />
+                  Instrucciones del Reto
                 </h3>
                 <p className="text-sm leading-relaxed text-slate-600 whitespace-pre-wrap">{challenge.description}</p>
               </div>
@@ -180,34 +180,42 @@ export default function ChallengeExecutionPage() {
             {result && (
               <section className="space-y-4 animate-in fade-in slide-in-from-bottom-4">
                 {result.awardedBadge && (
-                  <div className="bg-gradient-to-br from-amber-500 to-orange-600 p-6 rounded-[2rem] text-white shadow-xl">
-                    <div className="flex items-center gap-4">
-                      <div className="bg-white/20 p-3 rounded-2xl"><Medal className="h-10 w-10" /></div>
+                  <div className="bg-gradient-to-br from-amber-500 to-orange-600 p-6 rounded-[2rem] text-white shadow-xl relative overflow-hidden">
+                    <Stars className="absolute top-0 right-0 h-20 w-20 opacity-20 -mr-4 -mt-4" />
+                    <div className="flex items-center gap-4 relative z-10">
+                      <div className="bg-white/20 p-3 rounded-2xl backdrop-blur-md shadow-inner"><Medal className="h-10 w-10" /></div>
                       <div>
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-white/80">NUEVO LOGRO</p>
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-white/80">NUEVO LOGRO IA</p>
                         <h3 className="text-xl font-headline font-bold leading-tight">{result.awardedBadge.title}</h3>
                       </div>
                     </div>
                   </div>
                 )}
-                <Card className={`rounded-3xl border-2 ${result.passed ? 'border-emerald-500/20 bg-emerald-50/50' : 'border-amber-500/20 bg-amber-50/50'}`}>
-                  <CardHeader className="p-4 pb-0"><CardTitle className="text-sm font-bold flex justify-between">Feedback IA <span>{result.score}/5.0</span></CardTitle></CardHeader>
-                  <CardContent className="p-4 pt-2"><p className="text-xs text-slate-700 leading-relaxed italic">"{result.feedback}"</p></CardContent>
+                <Card className={`rounded-3xl border-2 ${result.passed ? 'border-emerald-500/20 bg-emerald-50/50' : 'border-rose-500/20 bg-rose-50/50'}`}>
+                  <CardHeader className="p-4 pb-0">
+                    <CardTitle className="text-sm font-bold flex justify-between items-center">
+                      Feedback del Reclutador IA 
+                      <span className="bg-white px-2 py-1 rounded-lg border text-xs">{result.score.toFixed(1)}/5.0</span>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-4 pt-2">
+                    <p className="text-xs text-slate-700 leading-relaxed italic">"{result.feedback}"</p>
+                  </CardContent>
                 </Card>
               </section>
             )}
           </div>
         </aside>
 
-        <section className="flex-1 flex flex-col bg-slate-50 relative min-w-0">
+        <section className="flex-1 flex flex-col bg-slate-100 relative min-w-0">
           <div className="h-12 bg-white border-b flex items-center justify-between px-6 shrink-0">
             <div className="text-slate-500 text-[10px] font-bold uppercase tracking-widest flex items-center gap-2">
               {challenge.type === 'quiz' ? <HelpCircle className="h-3 w-3" /> : challenge.type === 'interview' ? <MessageSquare className="h-3 w-3" /> : challenge.type === 'wordsearch' ? <Gamepad2 className="h-3 w-3" /> : <Terminal className="h-3 w-3" />}
-              {challenge.type === 'quiz' ? 'Knowledge Battle' : challenge.type === 'interview' ? 'Simulador de Entrevista' : challenge.type === 'wordsearch' ? 'Sopa de Letras' : 'Editor de Código'}
+              {challenge.type === 'quiz' ? 'Prueba de Conocimientos' : challenge.type === 'interview' ? 'Simulador de Entrevista' : challenge.type === 'wordsearch' ? 'Juego de Vocabulario' : 'Entorno de Programación'}
             </div>
             {challenge.type !== 'quiz' && (challenge.type !== 'wordsearch' || isGameComplete) && (
-              <Button onClick={() => handleSubmit()} disabled={isEvaluating || !code.trim()} className="h-8 rounded-lg bg-primary hover:bg-primary/90 text-xs font-bold gap-2">
-                {isEvaluating ? <Loader2 className="h-3 w-3 animate-spin" /> : <><Sparkles className="h-3 w-3" /> Evaluar Respuesta</>}
+              <Button onClick={() => handleSubmit()} disabled={isEvaluating || !code.trim()} className="h-8 rounded-lg bg-primary hover:bg-primary/90 text-xs font-bold gap-2 px-4">
+                {isEvaluating ? <Loader2 className="h-3 w-3 animate-spin" /> : <><Sparkles className="h-3 w-3" /> Enviar para Evaluación</>}
               </Button>
             )}
           </div>
@@ -219,10 +227,15 @@ export default function ChallengeExecutionPage() {
                 {isGameComplete && (
                   <div className="max-w-2xl mx-auto space-y-6 animate-in slide-in-from-bottom-10 duration-700">
                     <div className="text-center space-y-2">
-                      <h3 className="text-2xl font-headline font-bold text-slate-900">¡Fase 1 completada!</h3>
-                      <p className="text-muted-foreground text-sm">Ahora demuestra que sabes usar estos términos redactando una breve explicación:</p>
+                      <h3 className="text-2xl font-headline font-bold text-slate-900">¡Fase de Juego Completada!</h3>
+                      <p className="text-muted-foreground text-sm font-medium">Ahora demuestra tu conocimiento explicando cómo aplicar estos términos:</p>
                     </div>
-                    <Textarea value={code} onChange={(e) => setCode(e.target.value)} className="min-h-[200px] rounded-[2rem] border-2 border-primary/20 bg-white p-8 text-lg" placeholder="Escribe aquí..." />
+                    <Textarea 
+                      value={code} 
+                      onChange={(e) => setCode(e.target.value)} 
+                      className="min-h-[200px] rounded-[2.5rem] border-none shadow-2xl bg-white p-10 text-xl font-medium focus-visible:ring-primary leading-relaxed" 
+                      placeholder="Escribe tu reflexión técnica aquí..." 
+                    />
                   </div>
                 )}
               </div>
@@ -232,33 +245,50 @@ export default function ChallengeExecutionPage() {
               </div>
             ) : challenge.type === 'interview' ? (
               <div className="h-full flex flex-col gap-6 animate-in fade-in duration-700">
-                <div className="bg-white p-8 rounded-[2rem] border shadow-sm border-primary/10">
-                  <h3 className="text-2xl font-headline font-bold text-slate-900 mb-4 flex items-center gap-3">
-                    <MessageSquare className="h-6 w-6 text-primary" />
-                    Sala de Entrevista Técnica
-                  </h3>
-                  <p className="text-slate-600 mb-6 leading-relaxed">
-                    Un reclutador senior está esperando tu respuesta. Usa terminología técnica en inglés y demuestra tus soft skills.
-                  </p>
+                <div className="bg-white p-10 rounded-[3rem] border shadow-2xl border-primary/5 flex-1 flex flex-col">
+                  <div className="flex items-center gap-4 mb-8">
+                    <div className="bg-primary/10 p-3 rounded-2xl"><MessageSquare className="h-8 w-8 text-primary" /></div>
+                    <div>
+                      <h3 className="text-2xl font-headline font-bold text-slate-900">Sala de Entrevista Virtual</h3>
+                      <p className="text-slate-500 text-sm font-medium">Usa terminología técnica y mantén un tono profesional.</p>
+                    </div>
+                  </div>
                   <Textarea 
                     value={code} 
                     onChange={(e) => setCode(e.target.value)} 
-                    className="min-h-[300px] rounded-[1.5rem] border-2 border-slate-100 bg-slate-50 p-8 text-xl font-medium focus-visible:ring-primary shadow-inner"
-                    placeholder="Escribe tu respuesta profesional aquí..."
+                    className="flex-1 rounded-[2rem] border-2 border-slate-50 bg-slate-50 p-10 text-2xl font-medium focus-visible:ring-primary shadow-inner resize-none leading-relaxed"
+                    placeholder="Escribe tu respuesta como si estuvieras frente al reclutador..."
                   />
                 </div>
               </div>
             ) : (
-              <div className="h-full bg-slate-950 rounded-[2rem] overflow-hidden flex flex-col shadow-2xl">
-                <Textarea value={code} onChange={(e) => setCode(e.target.value)} className="flex-1 bg-slate-950 text-emerald-400 font-mono text-sm p-8 focus-visible:ring-0 border-none resize-none leading-relaxed" spellCheck={false} />
+              <div className="h-full bg-slate-950 rounded-[2.5rem] overflow-hidden flex flex-col shadow-2xl border-4 border-slate-900">
+                <div className="bg-slate-900 px-6 py-2 flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-rose-500" />
+                  <div className="w-3 h-3 rounded-full bg-amber-500" />
+                  <div className="w-3 h-3 rounded-full bg-emerald-500" />
+                  <span className="ml-4 text-[10px] font-mono text-slate-500 uppercase font-bold tracking-widest">dev_terminal_v1.0</span>
+                </div>
+                <Textarea 
+                  value={code} 
+                  onChange={(e) => setCode(e.target.value)} 
+                  className="flex-1 bg-slate-950 text-emerald-400 font-mono text-sm p-10 focus-visible:ring-0 border-none resize-none leading-relaxed shadow-inner" 
+                  spellCheck={false} 
+                />
               </div>
             )}
 
             {isEvaluating && (
-              <div className="absolute inset-0 bg-slate-50/50 backdrop-blur-md flex items-center justify-center z-20">
-                <div className="flex flex-col items-center gap-4 p-12 bg-white rounded-[3rem] border shadow-2xl">
-                  <Sparkles className="h-16 w-16 text-primary animate-pulse" />
-                  <h3 className="text-2xl font-headline font-bold">IA analizando tu perfil...</h3>
+              <div className="absolute inset-0 bg-slate-100/60 backdrop-blur-xl flex items-center justify-center z-20">
+                <div className="flex flex-col items-center gap-6 p-16 bg-white rounded-[4rem] border shadow-2xl animate-in zoom-in duration-300">
+                  <div className="relative">
+                    <Sparkles className="h-20 w-20 text-primary animate-pulse" />
+                    <Stars className="absolute -top-2 -right-2 h-8 w-8 text-amber-400 animate-bounce" />
+                  </div>
+                  <div className="text-center space-y-2">
+                    <h3 className="text-3xl font-headline font-bold text-slate-900">IA Procesando Respuesta...</h3>
+                    <p className="text-muted-foreground font-medium">Analizando vocabulario, lógica y fluidez profesional.</p>
+                  </div>
                 </div>
               </div>
             )}
